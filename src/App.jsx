@@ -52,7 +52,6 @@ function App() {
   // Gradient Settings State
   const [gradientDirection, setGradientDirection] = useState('to right');
   const [colorCount, setColorCount] = useState(5); // Default: 5 colors
-  const [colorThreshold, setColorThreshold] = useState(10); // Placeholder threshold
   // Effects State
   const [blurValue, setBlurValue] = useState(0); // 0px blur initially
   const [saturationValue, setSaturationValue] = useState(100); // 100% saturation initially
@@ -298,7 +297,7 @@ function App() {
       setPalette([]);
       setColorSamplePoints([]);
     }
-  }, [completedCrop]); // Remove colorCount and colorThreshold from dependencies
+  }, [completedCrop]);
 
   // Separate effect to handle colorCount changes
   useEffect(() => {
@@ -495,36 +494,13 @@ function App() {
 
   // Effect to update colorItems when palette changes from extraction OR threshold changes
   useEffect(() => {
-    // 1. Apply Threshold Filtering (Simplified Approach)
-    // Convert 0-100 threshold range to an approximate RGB distance range (0-442)
-    // This mapping might need tuning. Lower threshold = smaller distance = less merging.
-    // const maxDistance = (colorThreshold / 100) * 100; // Example: threshold 10 -> maxDistance 10
-
-    // let filteredPalette = [];
-    // if (palette.length > 0) {
-    //   // Always keep the first color
-    //   filteredPalette.push(palette[0]);
-    //   // Iterate through the rest
-    //   for (let i = 1; i < palette.length; i++) {
-    //     // Compare current color to the *last added* color in filteredPalette
-    //     const distance = calculateColorDistance(palette[i], filteredPalette[filteredPalette.length - 1]);
-    //     // If the distance is greater than the threshold, keep the color
-    //     if (distance > maxDistance) {
-    //       filteredPalette.push(palette[i]);
-    //     }
-    //   }
-    // }
-
-    // 2. Map the filtered palette to colorItems
     setColorItems(palette.map((color, index) => ({
       id: `${color}-${index}-${Date.now()}`, // Create a unique ID
       color: color,
       isVisible: true, // Default to visible
     })));
 
-    // console.log(`Filtered palette (${filteredPalette.length} colors) with threshold ${colorThreshold} (maxDist: ${maxDistance.toFixed(2)}):`, filteredPalette);
-    console.log(`Palette (${palette.length} colors) with threshold ${colorThreshold}:`, palette);
-  }, [palette, colorThreshold]); // Re-run when palette or threshold changes
+  }, [palette]); // Re-run when palette or threshold changes
 
   // --- Generate Filter CSS ---
   const generateFilterCss = () => {
@@ -815,8 +791,8 @@ function App() {
       </header>
       <main className="grid grid-cols-3 md:grid-cols-5 gap-5">
         <div className="col-span-1 md:col-span-2 flex flex-col gap-5">
-          <section className="bg-white rounded-lg p-4 shadow">
-            <h2 className="mb-3 text-lg text-gray-700 pb-2 border-b border-gray-100">Upload & Crop Image</h2>
+          <section className="bg-white rounded-lg p-4 shadow space-y-3">
+            <h2 className=" text-lg text-gray-700 pb-2 border-b border-gray-100">Upload Image</h2>
 
             {imgSrc ? (
               <div {...getRootProps({
@@ -865,21 +841,39 @@ function App() {
               </div>
             )}
 
-            {/* Display crop info for debugging - remove later */}
-            {/* {completedCrop && (
-              <div className="mt-2 p-2 text-xs text-gray-600 bg-gray-100 rounded">
-                <p>Crop: W: {Math.round(completedCrop.width)}px H: {Math.round(completedCrop.height)}px</p>
-                <p>Pos: X: {Math.round(completedCrop.x)}px Y: {Math.round(completedCrop.y)}px</p>
+<div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="showNodes"
+                    checked={showColorNodes}
+                    onChange={(e) => setShowColorNodes(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="showNodes" className="text-sm text-gray-700">Show Color Nodes</label>
+                </div>
+                {showColorNodes && (
+                  <p className="text-xs text-gray-500 mt-1 italic">
+                    Drag nodes to change colors from different parts of the image.
+                  </p>
+                )}
               </div>
-            )} */}
 
           </section>
 
+          <section className="bg-white rounded-lg p-4 shadow">
+            <h2 className="mb-3 text-lg text-gray-700 pb-2 border-b border-gray-100">CSS Code</h2>
+            <pre className="min-h-[100px] bg-gray-800 text-gray-100 text-left whitespace-pre-wrap overflow-auto p-3 rounded text-sm">
+              <code>
+                {cssCodeResult || '/* CSS code will appear here */'}
+              </code>
+            </pre>
+          </section>
 
         </div>
         <div className='col-span-1 md:col-span-2 flex flex-col gap-5'>
-          <section className="bg-white rounded-lg p-4 shadow">
-            <h2 className="mb-3 text-lg text-gray-700 pb-2 border-b border-gray-100">
+          <section className="bg-white rounded-lg p-4 shadow space-y-3">
+            <h2 className=" text-lg text-gray-700 pb-2 border-b border-gray-100">
               Result Preview {isLoadingColors && '(Loading colors...)'}
             </h2>
             <div
@@ -894,19 +888,38 @@ function App() {
               {colorItems.length > 0 && colorItems.every(c => !c.isVisible) && 'All colors hidden'}
               {/* Placeholder for grain overlay if needed */}
             </div>
+
+            <div className="flex flex-col gap-1">
+                <label htmlFor="blur" className="font-semibold text-sm text-gray-700">Blur: {blurValue}px</label>
+                <input
+                  type="range"
+                  id="blur"
+                  min="0"
+                  max="20" // Max blur amount
+                  step="0.5"
+                  value={blurValue}
+                  onChange={(e) => setBlurValue(parseFloat(e.target.value))}
+                  className="w-full cursor-pointer"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="saturation" className="font-semibold text-sm text-gray-700">Saturation: {saturationValue}%</label>
+                <input
+                  type="range"
+                  id="saturation"
+                  min="0" // 0% = grayscale
+                  max="200" // 200% = double saturation
+                  value={saturationValue}
+                  onChange={(e) => setSaturationValue(parseInt(e.target.value, 10))}
+                  className="w-full cursor-pointer"
+                />
+              </div>
           </section>
 
 
 
 
-          <section className="bg-white rounded-lg p-4 shadow">
-            <h2 className="mb-3 text-lg text-gray-700 pb-2 border-b border-gray-100">CSS Code</h2>
-            <pre className="min-h-[100px] bg-gray-800 text-gray-100 text-left whitespace-pre-wrap overflow-auto p-3 rounded text-sm">
-              <code>
-                {cssCodeResult || '/* CSS code will appear here */'}
-              </code>
-            </pre>
-          </section>
+          
         </div>
         <div className="col-span-1 flex flex-col gap-5">
 
@@ -987,60 +1000,9 @@ function App() {
                   className="w-full p-2 border border-gray-300 rounded text-base"
                 />
               </div>
-              {/* <div className="flex flex-col gap-1">
-                <label htmlFor="threshold" className="font-semibold text-sm text-gray-700">Threshold: {colorThreshold}</label>
-                <input
-                  type="range"
-                  id="threshold"
-                  min="0"
-                  max="100" // Adjust range as needed
-                  value={colorThreshold}
-                  onChange={(e) => setColorThreshold(parseInt(e.target.value, 10))}
-                  className="w-full cursor-pointer"
-                />
-              </div> */}
-              <div className="flex flex-col gap-1">
-                <label htmlFor="blur" className="font-semibold text-sm text-gray-700">Blur: {blurValue}px</label>
-                <input
-                  type="range"
-                  id="blur"
-                  min="0"
-                  max="20" // Max blur amount
-                  step="0.5"
-                  value={blurValue}
-                  onChange={(e) => setBlurValue(parseFloat(e.target.value))}
-                  className="w-full cursor-pointer"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label htmlFor="saturation" className="font-semibold text-sm text-gray-700">Saturation: {saturationValue}%</label>
-                <input
-                  type="range"
-                  id="saturation"
-                  min="0" // 0% = grayscale
-                  max="200" // 200% = double saturation
-                  value={saturationValue}
-                  onChange={(e) => setSaturationValue(parseInt(e.target.value, 10))}
-                  className="w-full cursor-pointer"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="showNodes"
-                    checked={showColorNodes}
-                    onChange={(e) => setShowColorNodes(e.target.checked)}
-                    className="w-4 h-4"
-                  />
-                  <label htmlFor="showNodes" className="text-sm text-gray-700">Show Color Nodes</label>
-                </div>
-                {showColorNodes && (
-                  <p className="text-xs text-gray-500 mt-1 italic">
-                    Drag nodes to change colors from different parts of the image.
-                  </p>
-                )}
-              </div>
+            
+             
+              
             </div>
 
           </section>
