@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
-import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop';
 import {
   DndContext,
   closestCenter,
@@ -17,35 +16,13 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities'; // For transform/transition styles
-import 'react-image-crop/dist/ReactCrop.css'
 import './App.css';
-
-// Helper function to center the crop
-function centerAspectCrop(mediaWidth, mediaHeight, aspect) {
-  return centerCrop(
-    makeAspectCrop(
-      {
-        unit: '%',
-        width: 90, // Initial crop width
-      },
-      aspect,
-      mediaWidth,
-      mediaHeight
-    ),
-    mediaWidth,
-    mediaHeight
-  );
-}
-
 
 function App() {
   const [imgSrc, setImgSrc] = useState('');
   const imgRef = useRef(null);
   const [imgWidth, setImgWidth] = useState(0);
   const [imgHeight, setImgHeight] = useState(0);
-  const [crop, setCrop] = useState();
-  const [completedCrop, setCompletedCrop] = useState(null);
-  const [aspect, setAspect] = useState(undefined);
   // Use a state that holds objects with id, color, and visibility
   const [colorItems, setColorItems] = useState([]);
   const [isLoadingColors, setIsLoadingColors] = useState(false);
@@ -69,8 +46,6 @@ function App() {
   const [copyButtonText, setCopyButtonText] = useState('Copy CSS');
 
   const [palette, setPalette] = useState([]); // State to hold extracted colors
-
-  const [enableCrop, setEnableCrop] = useState(false);
 
   // --- Helper Function: Calculate Color Distance ---
   function calculateColorDistance(rgbString1, rgbString2) {
@@ -98,7 +73,6 @@ function App() {
 
   const onDrop = useCallback((acceptedFiles) => {
     if (acceptedFiles && acceptedFiles.length > 0) {
-      setCrop(undefined); // Makes crop preview update between images.
       const reader = new FileReader();
       reader.addEventListener('load', () =>
         setImgSrc(reader.result?.toString() || '')
@@ -114,11 +88,14 @@ function App() {
   });
 
   function onImageLoad(e) {
-    if (aspect) {
-      const { width, height } = e.currentTarget;
-      setCrop(centerAspectCrop(width, height, aspect));
-    }
     imgRef.current = e.currentTarget; // Store image ref
+    setImgWidth(e.currentTarget.width);
+    setImgHeight(e.currentTarget.height);
+    
+    // Extract colors after image loads
+    if (imgRef.current) {
+      extractColorsFromImage(imgRef.current, colorCount);
+    }
   }
 
   // --- Color Extraction Logic ---
@@ -149,46 +126,26 @@ function App() {
     return `rgb(${r},${g},${b})`;
   }
 
-  // Function to extract colors along a vertical line from top to bottom
-  async function extractColorsFromCrop(image, crop, maxColors = 5) {
-    if (!crop || !image) {
-      console.error('Invalid crop or image ref for color extraction.');
-      return { colors: [], points: [] };
+  // Function to extract colors from the entire image
+  async function extractColorsFromImage(image, maxColors = 5) {
+    if (!image) {
+      console.error('Invalid image ref for color extraction.');
+      return;
     }
-    const cropWidth = typeof crop.width === 'number' ? crop.width : 0;
-    const cropHeight = typeof crop.height === 'number' ? crop.height : 0;
-    if (cropWidth <= 0 || cropHeight <= 0) {
-      console.warn("Crop dimensions are zero or invalid.");
-      return { colors: [], points: [] };
-    }
-
-    const canvas = document.createElement('canvas');
-    const scaleX = image.naturalWidth / image.width;
-    const scaleY = image.naturalHeight / image.height;
-    canvas.width = Math.floor(cropWidth * scaleX);
-    canvas.height = Math.floor(cropHeight * scaleY);
-
-    if (canvas.width === 0 || canvas.height === 0) {
-      console.warn("Canvas dimensions for crop are zero.");
-      return { colors: [], points: [] };
-    }
-
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) {
-      console.error('Failed to get 2D context from canvas.');
-      return { colors: [], points: [] };
-    }
-
-    ctx.drawImage(
-      image,
-      Math.floor(crop.x * scaleX),
-      Math.floor(crop.y * scaleY),
-      Math.floor(cropWidth * scaleX),
-      Math.floor(cropHeight * scaleY),
-      0, 0, canvas.width, canvas.height
-    );
-
+    
+    setIsLoadingColors(true);
+    
     try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      
+      // Set canvas dimensions to match image
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      
+      // Draw the image to the canvas
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      
       // Determine how many colors to sample
       const actualMaxColors = Math.min(maxColors, canvas.height);
       
@@ -237,357 +194,46 @@ function App() {
           palette.push(`rgb(${r}, ${g}, ${b})`);
           
           // Calculate display coordinates for the sample point
-          const displayX = crop.width / 2;
-          const displayY = (crop.height * yPercent);
+          const displayX = image.width / 2;
+          const displayY = (image.height * yPercent);
           
           samplePoints.push({ x: displayX, y: displayY });
         }
       }
 
-      console.log(`Linear vertical sampling extracted ${palette.length} colors:`, palette);
+      console.log(`Extracted ${palette.length} colors:`, palette);
 
       // Fallback if no colors found
       if (palette.length === 0) {
-        console.warn("Linear vertical sampling failed, falling back to average color.");
+        console.warn("Color sampling failed, falling back to average color.");
         const avgColor = getAverageColor(canvas, ctx);
-        return {
-          colors: avgColor ? [avgColor] : [],
-          points: avgColor ? [{ x: crop.width / 2, y: crop.height / 2 }] : []
-        };
+        if (avgColor) {
+          setPalette([avgColor]);
+          setColorSamplePoints([{ x: image.width / 2, y: image.height / 2 }]);
+        }
+      } else {
+        setPalette(palette);
+        setColorSamplePoints(samplePoints);
       }
-
-      return {
-        colors: palette,
-        points: samplePoints
-      };
-
     } catch (error) {
       console.error("Error during color extraction:", error);
-      // Fallback to average color on any error
-      const avgColor = getAverageColor(canvas, ctx);
-      return {
-        colors: avgColor ? [avgColor] : [],
-        points: avgColor ? [{ x: crop.width / 2, y: crop.height / 2 }] : []
-      };
+    } finally {
+      setIsLoadingColors(false);
     }
   }
 
   // Effect to trigger color extraction when crop is complete
   useEffect(() => {
     if (
-      completedCrop?.width &&
-      completedCrop?.height &&
-      imgRef.current
-    ) {
-      // Only extract colors if palette is empty (initial load) or crop dimensions changed
-      if (palette.length === 0) {
-        setIsLoadingColors(true);
-        // Pass colorCount to the extraction function
-        extractColorsFromCrop(imgRef.current, completedCrop, colorCount)
-          .then(result => {
-            setPalette(result.colors);
-            setColorSamplePoints(result.points);
-            setIsLoadingColors(false);
-            console.log("Extracted Palette:", result.colors); // For debugging
-            console.log("Sample Points:", result.points); // For debugging
-          })
-          .catch(error => {
-            console.error("Error extracting colors:", error);
-            setIsLoadingColors(false);
-          });
-      }
-    } else {
-      // Reset palette if crop is invalid or no image
-      setPalette([]);
-      setColorSamplePoints([]);
-    }
-  }, [completedCrop]);
-
-  // Separate effect to handle colorCount changes
-  useEffect(() => {
-    // Only run this effect if we already have colors and image is loaded
-    if (palette.length > 0 && colorItems.length > 0 && completedCrop && imgRef.current) {
-      const currentCount = colorItems.length;
-      
-      // If we need to add more colors
-      if (colorCount > currentCount) {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        
-        // Set canvas dimensions
-        const scaleX = imgRef.current.naturalWidth / imgRef.current.width;
-        const scaleY = imgRef.current.naturalHeight / imgRef.current.height;
-        canvas.width = Math.floor(completedCrop.width * scaleX);
-        canvas.height = Math.floor(completedCrop.height * scaleY);
-        
-        // Draw the image to the canvas
-        ctx.drawImage(
-          imgRef.current,
-          Math.floor(completedCrop.x * scaleX),
-          Math.floor(completedCrop.y * scaleY),
-          Math.floor(completedCrop.width * scaleX),
-          Math.floor(completedCrop.height * scaleY),
-          0, 0, canvas.width, canvas.height
-        );
-        
-        // Create new colors and points between the last and second-to-last points
-        const newColors = [];
-        const newPoints = [];
-        const newStops = [];
-        
-        // Number of colors to add
-        const numToAdd = colorCount - currentCount;
-        
-        for (let i = 0; i < numToAdd; i++) {
-          // If we have at least two colors, use them as reference points
-          if (colorSamplePoints.length >= 2 && colorItems.length >= 2) {
-            // Get the last and second-to-last points
-            const lastIdx = colorSamplePoints.length - 1;
-            const secondLastIdx = colorSamplePoints.length - 2;
-            
-            const lastPoint = colorSamplePoints[lastIdx];
-            const secondLastPoint = colorSamplePoints[secondLastIdx];
-            
-            // Get the last and second-to-last colors
-            const lastColor = colorItems[lastIdx].color;
-            const secondLastColor = colorItems[secondLastIdx].color;
-            
-            // Get the last and second-to-last stops if available
-            let lastStop = colorStops[lastIdx] !== undefined ? colorStops[lastIdx] : 100;
-            let secondLastStop = colorStops[secondLastIdx] !== undefined ? colorStops[secondLastIdx] : (lastStop > 0 ? lastStop - 20 : 0);
-            
-            // Calculate the position for the new node - divide the space evenly
-            const divisions = numToAdd + 1;
-            const fraction = (i + 1) / divisions;
-            
-            // Interpolate between the points
-            const newX = secondLastPoint.x + (lastPoint.x - secondLastPoint.x) * fraction;
-            const newY = secondLastPoint.y + (lastPoint.y - secondLastPoint.y) * fraction;
-            
-            // Calculate the new stop position
-            const newStop = Math.round(secondLastStop + (lastStop - secondLastStop) * fraction);
-            
-            // Interpolate colors by sampling the image at the new position
-            try {
-              // Get color directly from the position of the new point
-              // First convert coordinates to the full image space (accounting for crop)
-              const imageX = Math.floor((newX + (completedCrop?.x || 0)) * scaleX);
-              const imageY = Math.floor((newY + (completedCrop?.y || 0)) * scaleY);
-              
-              // Sample a small region around the point for a more accurate color
-              const sampleSize = 3;
-              const startX = Math.max(0, imageX - sampleSize);
-              const startY = Math.max(0, imageY - sampleSize);
-              const width = Math.min(sampleSize * 2 + 1, canvas.width - startX);
-              const height = Math.min(sampleSize * 2 + 1, canvas.height - startY);
-              
-              // Check if the sampling area is valid
-              if (width <= 0 || height <= 0 || startX >= canvas.width || startY >= canvas.height) {
-                throw new Error("Invalid sampling area");
-              }
-              
-              // Get image data at this exact position
-              const imageData = ctx.getImageData(startX, startY, width, height);
-              const data = imageData.data;
-              
-              // Calculate average color
-              let r = 0, g = 0, b = 0, count = 0;
-              for (let j = 0; j < data.length; j += 4) {
-                if (data[j+3] < 128) continue; // Skip transparent pixels
-                r += data[j];
-                g += data[j+1];
-                b += data[j+2];
-                count++;
-              }
-              
-              if (count > 0) {
-                r = Math.round(r / count);
-                g = Math.round(g / count);
-                b = Math.round(b / count);
-                
-                const newColor = `rgb(${r}, ${g}, ${b})`;
-                newColors.push(newColor);
-                newPoints.push({ x: newX, y: newY });
-                newStops.push(newStop);
-              } else {
-                // Fallback: Blend between the two existing colors
-                const parseRgb = (rgbStr) => {
-                  const match = rgbStr.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-                  if (!match) return { r: 0, g: 0, b: 0 };
-                  return { r: parseInt(match[1]), g: parseInt(match[2]), b: parseInt(match[3]) };
-                };
-                
-                const color1 = parseRgb(secondLastColor);
-                const color2 = parseRgb(lastColor);
-                
-                const blendedR = Math.round(color1.r + (color2.r - color1.r) * fraction);
-                const blendedG = Math.round(color1.g + (color2.g - color1.g) * fraction);
-                const blendedB = Math.round(color1.b + (color2.b - color1.b) * fraction);
-                
-                const newColor = `rgb(${blendedR}, ${blendedG}, ${blendedB})`;
-                newColors.push(newColor);
-                newPoints.push({ x: newX, y: newY });
-                newStops.push(newStop);
-              }
-            } catch (error) {
-              console.error("Error sampling color for new point:", error);
-              // Fallback: Blend between the two existing colors
-              const parseRgb = (rgbStr) => {
-                const match = rgbStr.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-                if (!match) return { r: 0, g: 0, b: 0 };
-                return { r: parseInt(match[1]), g: parseInt(match[2]), b: parseInt(match[3]) };
-              };
-              
-              const color1 = parseRgb(secondLastColor);
-              const color2 = parseRgb(lastColor);
-              
-              const blendedR = Math.round(color1.r + (color2.r - color1.r) * fraction);
-              const blendedG = Math.round(color1.g + (color2.g - color1.g) * fraction);
-              const blendedB = Math.round(color1.b + (color2.b - color1.b) * fraction);
-              
-              const newColor = `rgb(${blendedR}, ${blendedG}, ${blendedB})`;
-              newColors.push(newColor);
-              newPoints.push({ x: newX, y: newY });
-              newStops.push(newStop);
-            }
-          } else {
-            // Fallback if we don't have enough reference points
-            const lastPoint = colorSamplePoints[colorSamplePoints.length - 1] || { x: completedCrop.width / 2, y: completedCrop.height / 2 };
-            const maxOffset = 30; // Maximum pixel offset in any direction
-            
-            // Calculate random offsets within bounds
-            const randomOffsetX = Math.random() * maxOffset * (Math.random() > 0.5 ? 1 : -1);
-            const randomOffsetY = Math.random() * maxOffset * (Math.random() > 0.5 ? 1 : -1);
-            
-            // Ensure the new point is within image bounds
-            const newX = Math.min(Math.max(lastPoint.x + randomOffsetX, 0), completedCrop.width);
-            const newY = Math.min(Math.max(lastPoint.y + randomOffsetY, 0), completedCrop.height);
-            
-            // Sample the color at this position
-            const canvasX = Math.floor((newX / completedCrop.width) * canvas.width);
-            const canvasY = Math.floor((newY / completedCrop.height) * canvas.height);
-            
-            // Sample a small region around the point
-            const sampleSize = 5;
-            const startX = Math.max(0, canvasX - sampleSize);
-            const startY = Math.max(0, canvasY - sampleSize);
-            const width = Math.min(sampleSize * 2, canvas.width - startX);
-            const height = Math.min(sampleSize * 2, canvas.height - startY);
-            
-            // Get image data
-            try {
-              const imageData = ctx.getImageData(startX, startY, width, height);
-              const data = imageData.data;
-              
-              // Calculate average color
-              let r = 0, g = 0, b = 0, count = 0;
-              for (let j = 0; j < data.length; j += 4) {
-                if (data[j+3] < 128) continue; // Skip transparent pixels
-                r += data[j];
-                g += data[j+1];
-                b += data[j+2];
-                count++;
-              }
-              
-              if (count > 0) {
-                r = Math.round(r / count);
-                g = Math.round(g / count);
-                b = Math.round(b / count);
-                
-                const newColor = `rgb(${r}, ${g}, ${b})`;
-                newColors.push(newColor);
-                newPoints.push({ x: newX, y: newY });
-                
-                // Calculate a stop value
-                const existingStop = colorStops[colorStops.length - 1] || 100;
-                const newStop = Math.max(0, existingStop - 10);
-                newStops.push(newStop);
-              }
-            } catch (error) {
-              console.error("Error sampling color for new point:", error);
-              // Fallback to a random color if sampling fails
-              const randomColor = `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
-              newColors.push(randomColor);
-              newPoints.push({ x: newX, y: newY });
-              
-              // Calculate a stop value
-              const existingStop = colorStops[colorStops.length - 1] || 100;
-              const newStop = Math.max(0, existingStop - 10);
-              newStops.push(newStop);
-            }
-          }
-        }
-        
-        // Add the new colors, points, and stops in the right position (between second-to-last and last)
-        if (newColors.length > 0 && colorItems.length >= 2) {
-          // Create a copy of the current data
-          let updatedPalette = [...palette];
-          let updatedPoints = [...colorSamplePoints];
-          let updatedStops = [...colorStops];
-          
-          // Insert new items BEFORE the last position (between second-to-last and last)
-          const insertIndex = Math.max(0, updatedPalette.length - 1);
-          
-          // Save last item values to preserve them
-          const lastColor = updatedPalette[updatedPalette.length - 1];
-          const lastPoint = updatedPoints[updatedPoints.length - 1];
-          const lastStop = updatedStops[updatedStops.length - 1];
-          
-          // Insert each new color/point/stop at the proper position
-          for (let i = 0; i < newColors.length; i++) {
-            updatedPalette.splice(insertIndex + i, 0, newColors[i]);
-            updatedPoints.splice(insertIndex + i, 0, newPoints[i]);
-            updatedStops.splice(insertIndex + i, 0, newStops[i]);
-          }
-          
-          // Make sure the last element is still the original last element
-          if (lastColor && lastPoint && updatedPalette.length > 1) {
-            updatedPalette[updatedPalette.length - 1] = lastColor;
-            updatedPoints[updatedPoints.length - 1] = lastPoint;
-            if (lastStop !== undefined) {
-              updatedStops[updatedStops.length - 1] = lastStop;
-            }
-          }
-          
-          // Update the state
-          setPalette(updatedPalette);
-          setColorSamplePoints(updatedPoints);
-          setColorStops(updatedStops);
-        } else if (newColors.length > 0) {
-          // If there aren't enough existing colors, just append
-          setPalette(prev => [...prev, ...newColors]);
-          setColorSamplePoints(prev => [...prev, ...newPoints]);
-          setColorStops(prev => [...prev, ...newStops]);
-        }
-      } else {
-        //remove colors
-        setPalette(prev => prev.slice(0, colorCount));
-        setColorSamplePoints(prev => prev.slice(0, colorCount));
-      }
-    }
-  }, [colorCount, imgRef.current]);
-
-  useEffect(() => {
-    if (
       imgRef.current
     ) {
       setImgHeight(imgRef.current.height);
       setImgWidth(imgRef.current.width);
-
-      setCompletedCrop({
-        width: imgRef.current.width,
-        height: imgRef.current.height,
-        x: 0,
-        y: 0
-      });
-
-
     } else {
       // Reset palette if crop is invalid or no image
       setPalette([]);
     }
   }, [imgSrc]);// Add dependencies if they affect extraction
-
 
   // --- Drag and Drop Setup ---
   const sensors = useSensors(
@@ -684,7 +330,7 @@ function App() {
 
   const gradientCss = generateGradientCss();
 
-  // Effect to update colorItems when palette changes from extraction OR threshold changes
+  // Effect to update colorItems when palette changes
   useEffect(() => {
     setColorItems(palette.map((color, index) => ({
       id: `${color}-${index}-${Date.now()}`, // Create a unique ID
@@ -699,7 +345,7 @@ function App() {
       );
       setColorStops(newStops);
     }
-  }, [palette]); // Re-run when palette or threshold changes
+  }, [palette]); // Re-run when palette changes
 
   // --- Generate Filter CSS ---
   const generateFilterCss = () => {
@@ -923,14 +569,10 @@ function App() {
       const scaleX = canvas.width / imgRef.current.width;
       const scaleY = canvas.height / imgRef.current.height;
       
-      // Get the crop offset if we have a crop
-      const cropX = completedCrop?.x || 0;
-      const cropY = completedCrop?.y || 0;
-      
       // Sample a small region around the point (5x5 pixels)
       const sampleSize = 5;
-      const x = Math.floor((position.x + cropX) * scaleX);
-      const y = Math.floor((position.y + cropY) * scaleY);
+      const x = Math.floor(position.x * scaleX);
+      const y = Math.floor(position.y * scaleY);
       
       // Ensure we're within bounds
       const validX = Math.min(Math.max(x, sampleSize), canvas.width - sampleSize);
@@ -1237,6 +879,266 @@ function App() {
     );
   };
 
+  // Separate effect to handle colorCount changes
+  useEffect(() => {
+    // Only run this effect if we already have colors and image is loaded
+    if (palette.length > 0 && colorItems.length > 0 && imgRef.current) {
+      const currentCount = colorItems.length;
+      
+      // If we need to add more colors
+      if (colorCount > currentCount) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        
+        // Set canvas dimensions
+        canvas.width = imgRef.current.naturalWidth;
+        canvas.height = imgRef.current.naturalHeight;
+        
+        // Draw the image to the canvas
+        ctx.drawImage(imgRef.current, 0, 0, canvas.width, canvas.height);
+        
+        // Create new colors and points between the last and second-to-last points
+        const newColors = [];
+        const newPoints = [];
+        const newStops = [];
+        
+        // Number of colors to add
+        const numToAdd = colorCount - currentCount;
+        
+        for (let i = 0; i < numToAdd; i++) {
+          // If we have at least two colors, use them as reference points
+          if (colorSamplePoints.length >= 2 && colorItems.length >= 2) {
+            // Get the last and second-to-last points
+            const lastIdx = colorSamplePoints.length - 1;
+            const secondLastIdx = colorSamplePoints.length - 2;
+            
+            const lastPoint = colorSamplePoints[lastIdx];
+            const secondLastPoint = colorSamplePoints[secondLastIdx];
+            
+            // Get the last and second-to-last colors
+            const lastColor = colorItems[lastIdx].color;
+            const secondLastColor = colorItems[secondLastIdx].color;
+            
+            // Get the last and second-to-last stops if available
+            let lastStop = colorStops[lastIdx] !== undefined ? colorStops[lastIdx] : 100;
+            let secondLastStop = colorStops[secondLastIdx] !== undefined ? colorStops[secondLastIdx] : (lastStop > 0 ? lastStop - 20 : 0);
+            
+            // Calculate the position for the new node - divide the space evenly
+            const divisions = numToAdd + 1;
+            const fraction = (i + 1) / divisions;
+            
+            // Interpolate between the points
+            const newX = secondLastPoint.x + (lastPoint.x - secondLastPoint.x) * fraction;
+            const newY = secondLastPoint.y + (lastPoint.y - secondLastPoint.y) * fraction;
+            
+            // Calculate the new stop position
+            const newStop = Math.round(secondLastStop + (lastStop - secondLastStop) * fraction);
+            
+            // Interpolate colors by sampling the image at the new position
+            try {
+              // Get color directly from the position of the new point
+              // Convert to image coordinates
+              const imageX = Math.floor(newX * (canvas.width / imgRef.current.width));
+              const imageY = Math.floor(newY * (canvas.height / imgRef.current.height));
+              
+              // Check if the coordinates are within bounds
+              if (imageX < 0 || imageX >= canvas.width || imageY < 0 || imageY >= canvas.height) {
+                throw new Error("Position outside image bounds");
+              }
+              
+              // Sample a small region around the point for a more accurate color
+              const sampleSize = 3;
+              const startX = Math.max(0, imageX - sampleSize);
+              const startY = Math.max(0, imageY - sampleSize);
+              const width = Math.min(sampleSize * 2 + 1, canvas.width - startX);
+              const height = Math.min(sampleSize * 2 + 1, canvas.height - startY);
+              
+              // Check if the sampling area is valid
+              if (width <= 0 || height <= 0 || startX >= canvas.width || startY >= canvas.height) {
+                throw new Error("Invalid sampling area");
+              }
+              
+              // Get image data at this exact position
+              const imageData = ctx.getImageData(startX, startY, width, height);
+              const data = imageData.data;
+              
+              // Calculate average color
+              let r = 0, g = 0, b = 0, count = 0;
+              for (let j = 0; j < data.length; j += 4) {
+                if (data[j+3] < 128) continue; // Skip transparent pixels
+                r += data[j];
+                g += data[j+1];
+                b += data[j+2];
+                count++;
+              }
+              
+              if (count > 0) {
+                r = Math.round(r / count);
+                g = Math.round(g / count);
+                b = Math.round(b / count);
+                
+                const newColor = `rgb(${r}, ${g}, ${b})`;
+                newColors.push(newColor);
+                newPoints.push({ x: newX, y: newY });
+                newStops.push(newStop);
+              } else {
+                // Fallback: Blend between the two existing colors
+                const parseRgb = (rgbStr) => {
+                  const match = rgbStr.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+                  if (!match) return { r: 0, g: 0, b: 0 };
+                  return { r: parseInt(match[1]), g: parseInt(match[2]), b: parseInt(match[3]) };
+                };
+                
+                const color1 = parseRgb(secondLastColor);
+                const color2 = parseRgb(lastColor);
+                
+                const blendedR = Math.round(color1.r + (color2.r - color1.r) * fraction);
+                const blendedG = Math.round(color1.g + (color2.g - color1.g) * fraction);
+                const blendedB = Math.round(color1.b + (color2.b - color1.b) * fraction);
+                
+                const newColor = `rgb(${blendedR}, ${blendedG}, ${blendedB})`;
+                newColors.push(newColor);
+                newPoints.push({ x: newX, y: newY });
+                newStops.push(newStop);
+              }
+            } catch (error) {
+              console.error("Error sampling color for new point:", error);
+              // Fallback: Blend between the two existing colors
+              const parseRgb = (rgbStr) => {
+                const match = rgbStr.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+                if (!match) return { r: 0, g: 0, b: 0 };
+                return { r: parseInt(match[1]), g: parseInt(match[2]), b: parseInt(match[3]) };
+              };
+              
+              const color1 = parseRgb(secondLastColor);
+              const color2 = parseRgb(lastColor);
+              
+              const blendedR = Math.round(color1.r + (color2.r - color1.r) * fraction);
+              const blendedG = Math.round(color1.g + (color2.g - color1.g) * fraction);
+              const blendedB = Math.round(color1.b + (color2.b - color1.b) * fraction);
+              
+              const newColor = `rgb(${blendedR}, ${blendedG}, ${blendedB})`;
+              newColors.push(newColor);
+              newPoints.push({ x: newX, y: newY });
+              newStops.push(newStop);
+            }
+          } else {
+            // Fallback if we don't have enough reference points
+            const lastPoint = colorSamplePoints[colorSamplePoints.length - 1] || { x: imgRef.current.width / 2, y: imgRef.current.height / 2 };
+            const maxOffset = 30; // Maximum pixel offset in any direction
+            
+            // Calculate random offsets within bounds
+            const randomOffsetX = Math.random() * maxOffset * (Math.random() > 0.5 ? 1 : -1);
+            const randomOffsetY = Math.random() * maxOffset * (Math.random() > 0.5 ? 1 : -1);
+            
+            // Ensure the new point is within image bounds
+            const newX = Math.min(Math.max(lastPoint.x + randomOffsetX, 0), imgRef.current.width);
+            const newY = Math.min(Math.max(lastPoint.y + randomOffsetY, 0), imgRef.current.height);
+            
+            // Sample the color at this position
+            const canvasX = Math.floor((newX / imgRef.current.width) * canvas.width);
+            const canvasY = Math.floor((newY / imgRef.current.height) * canvas.height);
+            
+            // Sample a small region around the point
+            const sampleSize = 5;
+            const startX = Math.max(0, canvasX - sampleSize);
+            const startY = Math.max(0, canvasY - sampleSize);
+            const width = Math.min(sampleSize * 2, canvas.width - startX);
+            const height = Math.min(sampleSize * 2, canvas.height - startY);
+            
+            // Get image data
+            try {
+              const imageData = ctx.getImageData(startX, startY, width, height);
+              const data = imageData.data;
+              
+              // Calculate average color
+              let r = 0, g = 0, b = 0, count = 0;
+              for (let j = 0; j < data.length; j += 4) {
+                if (data[j+3] < 128) continue; // Skip transparent pixels
+                r += data[j];
+                g += data[j+1];
+                b += data[j+2];
+                count++;
+              }
+              
+              if (count > 0) {
+                r = Math.round(r / count);
+                g = Math.round(g / count);
+                b = Math.round(b / count);
+                
+                const newColor = `rgb(${r}, ${g}, ${b})`;
+                newColors.push(newColor);
+                newPoints.push({ x: newX, y: newY });
+                
+                // Calculate a stop value
+                const existingStop = colorStops[colorStops.length - 1] || 100;
+                const newStop = Math.max(0, existingStop - 10);
+                newStops.push(newStop);
+              }
+            } catch (error) {
+              console.error("Error sampling color for new point:", error);
+              // Fallback to a random color if sampling fails
+              const randomColor = `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
+              newColors.push(randomColor);
+              newPoints.push({ x: newX, y: newY });
+              
+              // Calculate a stop value
+              const existingStop = colorStops[colorStops.length - 1] || 100;
+              const newStop = Math.max(0, existingStop - 10);
+              newStops.push(newStop);
+            }
+          }
+        }
+        
+        // Add the new colors, points, and stops in the right position (between second-to-last and last)
+        if (newColors.length > 0 && colorItems.length >= 2) {
+          // Create a copy of the current data
+          let updatedPalette = [...palette];
+          let updatedPoints = [...colorSamplePoints];
+          let updatedStops = [...colorStops];
+          
+          // Insert new items BEFORE the last position (between second-to-last and last)
+          const insertIndex = Math.max(0, updatedPalette.length - 1);
+          
+          // Save last item values to preserve them
+          const lastColor = updatedPalette[updatedPalette.length - 1];
+          const lastPoint = updatedPoints[updatedPoints.length - 1];
+          const lastStop = updatedStops[updatedStops.length - 1];
+          
+          // Insert each new color/point/stop at the proper position
+          for (let i = 0; i < newColors.length; i++) {
+            updatedPalette.splice(insertIndex + i, 0, newColors[i]);
+            updatedPoints.splice(insertIndex + i, 0, newPoints[i]);
+            updatedStops.splice(insertIndex + i, 0, newStops[i]);
+          }
+          
+          // Make sure the last element is still the original last element
+          if (lastColor && lastPoint && updatedPalette.length > 1) {
+            updatedPalette[updatedPalette.length - 1] = lastColor;
+            updatedPoints[updatedPoints.length - 1] = lastPoint;
+            if (lastStop !== undefined) {
+              updatedStops[updatedPalette.length - 1] = lastStop;
+            }
+          }
+          
+          // Update the state
+          setPalette(updatedPalette);
+          setColorSamplePoints(updatedPoints);
+          setColorStops(updatedStops);
+        } else if (newColors.length > 0) {
+          // If there aren't enough existing colors, just append
+          setPalette(prev => [...prev, ...newColors]);
+          setColorSamplePoints(prev => [...prev, ...newPoints]);
+          setColorStops(prev => [...prev, ...newStops]);
+        }
+      } else {
+        //remove colors
+        setPalette(prev => prev.slice(0, colorCount));
+        setColorSamplePoints(prev => prev.slice(0, colorCount));
+      }
+    }
+  }, [colorCount, imgRef.current]);
+
   return (
     <div className="w-full mx-auto p-5">
       <header className="text-center mb-5 p-3 bg-gray-200 rounded-lg">
@@ -1248,40 +1150,22 @@ function App() {
             <h2 className=" text-lg text-gray-700 pb-2 border-b border-gray-100">Upload Image</h2>
 
             {imgSrc ? (
-              <div {...getRootProps({
-                className: `text-center min-h-[250px] flex flex-col items-center justify-center gap-2`
-              })}>
+              <div className="text-center min-h-[250px] flex flex-col items-center justify-center gap-2">
                 <div className="relative">
-                <ReactCrop
-                    crop={crop}
-                    onChange={(_, percentCrop) => setCrop(percentCrop)}
-                    onComplete={(c) => setCompletedCrop(c)} // Store completed crop
-                    aspect={aspect} // Enforce aspect ratio if needed
-                    disabled={!enableCrop}
-                  >
-                    <img
-                      ref={imgRef}
-                      alt="Upload preview"
-                      src={imgSrc}
-                      onLoad={onImageLoad}
-                      className="max-h-[400px] mx-auto" // Limit display height
-                    />
-                  </ReactCrop>
-                  {!enableCrop && <ColorNodes
+                  <img
+                    ref={imgRef}
+                    alt="Upload preview"
+                    src={imgSrc}
+                    onLoad={onImageLoad}
+                    className="max-h-[400px] mx-auto" // Limit display height
+                  />
+                  {showColorNodes && <ColorNodes
                     colorItems={colorItems}
                     samplePoints={colorSamplePoints}
                     imgWidth={imgWidth}
                     imgHeight={imgHeight}
                   />}
                 </div>
-                {/* {enableCrop ? (
-                  <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded  cursor-pointer" onClick={() => setEnableCrop(false)}>
-                    Apply Crop
-                  </button>
-                ) : (<button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded  cursor-pointer" onClick={() => setEnableCrop(true)}>
-                  Crop Image
-                </button>
-                )} */}
               </div>
             ) : (
               <div
@@ -1294,23 +1178,23 @@ function App() {
               </div>
             )}
 
-<div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="showNodes"
-                    checked={showColorNodes}
-                    onChange={(e) => setShowColorNodes(e.target.checked)}
-                    className="w-4 h-4"
-                  />
-                  <label htmlFor="showNodes" className="text-sm text-gray-700">Show Color Nodes</label>
-                </div>
-                {showColorNodes && (
-                  <p className="text-xs text-gray-500 mt-1 italic">
-                    Drag nodes to change colors from different parts of the image.
-                  </p>
-                )}
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="showNodes"
+                  checked={showColorNodes}
+                  onChange={(e) => setShowColorNodes(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <label htmlFor="showNodes" className="text-sm text-gray-700">Show Color Nodes</label>
               </div>
+              {showColorNodes && (
+                <p className="text-xs text-gray-500 mt-1 italic">
+                  Drag nodes to change colors from different parts of the image.
+                </p>
+              )}
+            </div>
 
           </section>
 
@@ -1337,7 +1221,7 @@ function App() {
                 height: imgHeight,
               }}
             >
-              {colorItems.length === 0 && !isLoadingColors && 'Upload and crop an image to see the preview'}
+              {colorItems.length === 0 && !isLoadingColors && 'Upload an image to see the preview'}
               {colorItems.length > 0 && colorItems.every(c => !c.isVisible) && 'All colors hidden'}
               {/* Gradient Slider overlay */}
               {colorItems.length > 1 && 
@@ -1398,10 +1282,6 @@ function App() {
             </div>
           </section>
 
-
-
-
-          
         </div>
         <div className="col-span-1 flex flex-col gap-5">
 
@@ -1482,25 +1362,19 @@ function App() {
                   className="w-full p-2 border border-gray-300 rounded text-base"
                 />
               </div>
-            
-             
               
+              <div className="flex justify-end">
+                <button
+                  onClick={handleCopyCss}
+                  disabled={!cssCodeResult}
+                  className="px-5 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  {copyButtonText}
+                </button>
+              </div>
             </div>
-
           </section>
 
-          {/* <section className="bg-white rounded-lg p-4 shadow">
-            <h2 className="mb-3 text-lg text-gray-700 pb-2 border-b border-gray-100">6. Save/Download</h2>
-            <div className="flex justify-end">
-              <button
-                onClick={handleCopyCss}
-                disabled={!cssCodeResult}
-                className="px-5 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                {copyButtonText}
-              </button>
-            </div>
-          </section> */}
         </div>
       </main>
     </div>
