@@ -52,6 +52,10 @@ function App() {
   // Gradient Settings State
   const [gradientDirection, setGradientDirection] = useState('to right');
   const [colorCount, setColorCount] = useState(5); // Default: 5 colors
+  // Color stops state (percentage position in the gradient)
+  const [colorStops, setColorStops] = useState([]);
+  // Show gradient stops slider toggle
+  const [showGradientStops, setShowGradientStops] = useState(true);
   // Effects State
   const [blurValue, setBlurValue] = useState(0); // 0px blur initially
   const [saturationValue, setSaturationValue] = useState(100); // 100% saturation initially
@@ -396,10 +400,12 @@ function App() {
         }
       } else {
           //remove colors
+          setPalette(prev => prev.slice(0, colorCount));
+          setColorSamplePoints(prev => prev.slice(0, colorCount));
       }
       // If we need to remove colors, we don't do anything here - the colorItems update effect will handle that
     }
-  }, [colorCount, completedCrop, imgRef.current]);
+  }, [colorCount, imgRef.current]);
 
   useEffect(() => {
     if (
@@ -465,6 +471,28 @@ function App() {
         
         return newPoints;
       });
+      
+      // Also update colorStops to match the reordered colorItems
+      setColorStops((stops) => {
+        if (!stops || oldIndex >= stops.length) {
+          return stops; // Return unchanged if there's a mismatch
+        }
+        
+        // Clone the array to avoid mutating state
+        const newStops = [...stops];
+        
+        // Get the stop value that's being moved
+        const stopToMove = newStops[oldIndex];
+        
+        // Remove it from its old position
+        newStops.splice(oldIndex, 1);
+        
+        // Insert it at the new position
+        const safeNewIndex = Math.min(newIndex, newStops.length);
+        newStops.splice(safeNewIndex, 0, stopToMove);
+        
+        return newStops;
+      });
     }
   }
 
@@ -480,14 +508,18 @@ function App() {
   // --- Generate Gradient CSS ---
   const generateGradientCss = () => {
     const visibleColors = colorItems
-      .filter(item => item.isVisible)
-      .map(item => item.color); // Get only the color string
+      .filter(item => item.isVisible);
 
     if (visibleColors.length === 0) return 'none'; // Or a default background
-    if (visibleColors.length === 1) return visibleColors[0]; // Solid color
+    if (visibleColors.length === 1) return visibleColors[0].color; // Solid color
 
-    // TODO: Add color stops later if needed
-    return `linear-gradient(${gradientDirection}, ${visibleColors.join(', ')})`;
+    // Build gradient with color stops
+    const colorString = visibleColors.map((item, index) => {
+      const stop = colorStops[index];
+      return stop !== undefined ? `${item.color} ${stop}%` : item.color;
+    }).join(', ');
+    
+    return `linear-gradient(${gradientDirection}, ${colorString})`;
   };
 
   const gradientCss = generateGradientCss();
@@ -500,6 +532,13 @@ function App() {
       isVisible: true, // Default to visible
     })));
 
+    // Initialize color stops when palette changes (evenly distributed)
+    if (palette.length > 0) {
+      const newStops = palette.map((_, index) => 
+        Math.round((index / (palette.length - 1)) * 100)
+      );
+      setColorStops(newStops);
+    }
   }, [palette]); // Re-run when palette or threshold changes
 
   // --- Generate Filter CSS ---
@@ -540,7 +579,7 @@ function App() {
   // Effect to update CSS code when gradient or filters change
   useEffect(() => {
     generateCssCode();
-  }, [gradientCss, filterCss]); // Dependencies
+  }, [gradientCss, filterCss, colorStops]); // Add colorStops as dependency
 
   // --- Copy CSS to Clipboard ---
   const handleCopyCss = () => {
@@ -784,6 +823,260 @@ function App() {
     }
   };
 
+  // Gradient Slider Component for Result Preview
+  const GradientSlider = ({ colorItems, colorStops, setColorStops, gradientDirection }) => {
+    if (!colorItems.length || !showGradientStops) return null;
+    
+    // Filter to only visible colors
+    const visibleColors = colorItems.filter(item => item.isVisible);
+    if (visibleColors.length <= 1) return null;
+    
+    // Get the corresponding stops for visible colors
+    const visibleStops = [];
+    const visibleIndices = [];
+    
+    for (let i = 0; i < visibleColors.length; i++) {
+      const colorItem = visibleColors[i];
+      const originalIndex = colorItems.findIndex(item => item.id === colorItem.id);
+      
+      if (originalIndex >= 0) {
+        visibleStops.push(colorStops[originalIndex] ?? i * (100 / (visibleColors.length - 1)));
+        visibleIndices.push(originalIndex);
+      }
+    }
+    
+    // Determine slider orientation and dimensions
+    const isHorizontal = gradientDirection.includes('right') || 
+                          gradientDirection.includes('left') || 
+                          gradientDirection.includes('90deg') || 
+                          gradientDirection.includes('270deg');
+    
+    const isDiagonal = gradientDirection.includes('bottom right') || 
+                        gradientDirection.includes('bottom left') || 
+                        gradientDirection.includes('top right') || 
+                        gradientDirection.includes('top left') ||
+                        gradientDirection.includes('45deg') || 
+                        gradientDirection.includes('135deg') || 
+                        gradientDirection.includes('225deg') || 
+                        gradientDirection.includes('315deg');
+    
+    // Use refs for dragging state
+    const dragRef = useRef({
+      isDragging: false,
+      nodeIndex: -1,
+      originalIndex: -1
+    });
+    
+    // Handle node dragging
+    const handleNodeDragStart = (e, index, originalIndex) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Set dragging state in ref for more reliable tracking
+      dragRef.current = {
+        isDragging: true,
+        nodeIndex: index,
+        originalIndex: originalIndex
+      };
+      
+      // Add event listeners to window to ensure we capture all mouse movements
+      window.addEventListener('mousemove', handleNodeDrag);
+      window.addEventListener('mouseup', handleNodeDragEnd);
+    };
+    
+    const handleNodeDrag = useCallback((e) => {
+      console.log('dragging',e);
+      if (!dragRef.current.isDragging) return;
+      
+      const svg = document.querySelector('.gradient-slider');
+      if (!svg) return;
+      
+      const svgRect = svg.getBoundingClientRect();
+      const index = dragRef.current.nodeIndex;
+      const originalIndex = dragRef.current.originalIndex;
+      
+      // Calculate new stop position based on orientation
+      let newStopPercentage;
+      
+      if (isHorizontal) {
+        // For horizontal gradients, use x position
+        const relativeX = e.clientX - svgRect.left;
+        newStopPercentage = Math.min(100, Math.max(0, (relativeX / svgRect.width) * 100));
+      } else if (isDiagonal) {
+        // For diagonal gradients, use both x and y
+        const relativeX = e.clientX - svgRect.left;
+        const relativeY = e.clientY - svgRect.top;
+        
+        // Use a weighted average for diagonal positions
+        const xPercent = (relativeX / svgRect.width) * 100;
+        const yPercent = (relativeY / svgRect.height) * 100;
+        
+        // For diagonal, choose the appropriate blend based on direction
+        if (gradientDirection.includes('bottom right') || gradientDirection.includes('45deg')) {
+          // To bottom right: both increase together
+          newStopPercentage = (xPercent + yPercent) / 2;
+        } else if (gradientDirection.includes('bottom left') || gradientDirection.includes('135deg')) {
+          // To bottom left: x decreases, y increases
+          newStopPercentage = ((100 - xPercent) + yPercent) / 2;
+        } else if (gradientDirection.includes('top right') || gradientDirection.includes('315deg')) {
+          // To top right: x increases, y decreases
+          newStopPercentage = (xPercent + (100 - yPercent)) / 2;
+        } else {
+          // To top left: both decrease
+          newStopPercentage = ((100 - xPercent) + (100 - yPercent)) / 2;
+        }
+      } else {
+        // For vertical gradients, use y position
+        const relativeY = e.clientY - svgRect.top;
+        newStopPercentage = Math.min(100, Math.max(0, (relativeY / svgRect.height) * 100));
+      }
+      
+      newStopPercentage = Math.min(100, Math.max(0, newStopPercentage));
+      
+      // Update the stops array
+      const newStops = [...colorStops];
+      newStops[originalIndex] = Math.round(newStopPercentage);
+      setColorStops(newStops);
+    }, [isHorizontal, isDiagonal, gradientDirection, colorStops, setColorStops]);
+    
+    const handleNodeDragEnd = useCallback(() => {
+      console.log('drag end');
+      if (!dragRef.current.isDragging) return;
+      
+      // Reset dragging state
+      dragRef.current = {
+        isDragging: false,
+        nodeIndex: -1,
+        originalIndex: -1
+      };
+      
+      // Remove global event listeners
+      window.removeEventListener('mousemove', handleNodeDrag);
+      window.removeEventListener('mouseup', handleNodeDragEnd);
+    }, [handleNodeDrag]);
+    
+    // Determine track and handle positions based on orientation
+    return (
+      <div className="absolute inset-0 pointer-events-none">
+        <svg 
+          className="gradient-slider w-full h-full" 
+          width="100%" 
+          height="100%"
+        >
+          {/* Track line for visual reference */}
+          {isHorizontal ? (
+            <line 
+              x1="0%" 
+              y1="50%" 
+              x2="100%" 
+              y2="50%" 
+              stroke="rgba(255,255,255,0.5)"
+              strokeWidth="2"
+              strokeDasharray="4"
+            />
+          ) : isDiagonal ? (
+            gradientDirection.includes('bottom right') || gradientDirection.includes('45deg') ? (
+              <line 
+                x1="0%" 
+                y1="0%" 
+                x2="100%" 
+                y2="100%" 
+                stroke="rgba(255,255,255,0.5)"
+                strokeWidth="2"
+                strokeDasharray="4"
+              />
+            ) : gradientDirection.includes('bottom left') || gradientDirection.includes('135deg') ? (
+              <line 
+                x1="100%" 
+                y1="0%" 
+                x2="0%" 
+                y2="100%" 
+                stroke="rgba(255,255,255,0.5)"
+                strokeWidth="2"
+                strokeDasharray="4"
+              />
+            ) : gradientDirection.includes('top right') || gradientDirection.includes('315deg') ? (
+              <line 
+                x1="0%" 
+                y1="100%" 
+                x2="100%" 
+                y2="0%" 
+                stroke="rgba(255,255,255,0.5)"
+                strokeWidth="2"
+                strokeDasharray="4"
+              />
+            ) : (
+              <line 
+                x1="100%" 
+                y1="100%" 
+                x2="0%" 
+                y2="0%" 
+                stroke="rgba(255,255,255,0.5)"
+                strokeWidth="2"
+                strokeDasharray="4"
+              />
+            )
+          ) : (
+            <line 
+              x1="50%" 
+              y1="0%" 
+              x2="50%" 
+              y2="100%" 
+              stroke="rgba(255,255,255,0.5)"
+              strokeWidth="2"
+              strokeDasharray="4"
+            />
+          )}
+          
+          {/* Color handle/nodes */}
+          {visibleColors.map((colorItem, index) => {
+            // Determine position based on orientation
+            const stopValue = visibleStops[index] || 0;
+            let posX, posY;
+            
+            if (isHorizontal) {
+              posX = `${stopValue}%`;
+              posY = '50%';
+            } else if (isDiagonal) {
+              if (gradientDirection.includes('bottom right') || gradientDirection.includes('45deg')) {
+                posX = `${stopValue}%`;
+                posY = `${stopValue}%`;
+              } else if (gradientDirection.includes('bottom left') || gradientDirection.includes('135deg')) {
+                posX = `${100 - stopValue}%`;
+                posY = `${stopValue}%`;
+              } else if (gradientDirection.includes('top right') || gradientDirection.includes('315deg')) {
+                posX = `${stopValue}%`;
+                posY = `${100 - stopValue}%`;
+              } else {
+                posX = `${100 - stopValue}%`;
+                posY = `${100 - stopValue}%`;
+              }
+            } else {
+              posX = '50%';
+              posY = `${stopValue}%`;
+            }
+            
+            return (
+              <circle
+                key={`stop-${index}`}
+                cx={posX}
+                cy={posY}
+                r="10"
+                fill={colorItem.color}
+                stroke="white"
+                strokeWidth="2"
+                style={{ cursor: 'grab', touchAction: 'none', pointerEvents: 'auto' }}
+                onMouseDown={(e) => handleNodeDragStart(e, index, visibleIndices[index])}
+              >
+                <title>Drag to adjust position</title>
+              </circle>
+            );
+          })}
+        </svg>
+      </div>
+    );
+  };
+
   return (
     <div className="w-full mx-auto p-5">
       <header className="text-center mb-5 p-3 bg-gray-200 rounded-lg">
@@ -886,10 +1179,19 @@ function App() {
             >
               {colorItems.length === 0 && !isLoadingColors && 'Upload and crop an image to see the preview'}
               {colorItems.length > 0 && colorItems.every(c => !c.isVisible) && 'All colors hidden'}
-              {/* Placeholder for grain overlay if needed */}
+              {/* Gradient Slider overlay */}
+              {colorItems.length > 1 && 
+                <GradientSlider 
+                  colorItems={colorItems}
+                  colorStops={colorStops}
+                  setColorStops={setColorStops}
+                  gradientDirection={gradientDirection}
+                />
+              }
             </div>
-
-            <div className="flex flex-col gap-1">
+            
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
                 <label htmlFor="blur" className="font-semibold text-sm text-gray-700">Blur: {blurValue}px</label>
                 <input
                   type="range"
@@ -902,6 +1204,7 @@ function App() {
                   className="w-full cursor-pointer"
                 />
               </div>
+              
               <div className="flex flex-col gap-1">
                 <label htmlFor="saturation" className="font-semibold text-sm text-gray-700">Saturation: {saturationValue}%</label>
                 <input
@@ -914,6 +1217,25 @@ function App() {
                   className="w-full cursor-pointer"
                 />
               </div>
+              
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="showGradientStops"
+                    checked={showGradientStops}
+                    onChange={(e) => setShowGradientStops(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="showGradientStops" className="text-sm text-gray-700">Show Gradient Stops</label>
+                </div>
+                {showGradientStops && (
+                  <p className="text-xs text-gray-500 mt-1 italic">
+                    Drag nodes to adjust color positions in the gradient.
+                  </p>
+                )}
+              </div>
+            </div>
           </section>
 
 
