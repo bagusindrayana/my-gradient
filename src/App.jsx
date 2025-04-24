@@ -395,6 +395,8 @@ function App() {
           setPalette(prev => [...prev, ...newColors]);
           setColorSamplePoints(prev => [...prev, ...newPoints]);
         }
+      } else {
+          //remove colors
       }
       // If we need to remove colors, we don't do anything here - the colorItems update effect will handle that
     }
@@ -496,25 +498,25 @@ function App() {
     // 1. Apply Threshold Filtering (Simplified Approach)
     // Convert 0-100 threshold range to an approximate RGB distance range (0-442)
     // This mapping might need tuning. Lower threshold = smaller distance = less merging.
-    const maxDistance = (colorThreshold / 100) * 100; // Example: threshold 10 -> maxDistance 10
+    // const maxDistance = (colorThreshold / 100) * 100; // Example: threshold 10 -> maxDistance 10
 
-    let filteredPalette = [];
-    if (palette.length > 0) {
-      // Always keep the first color
-      filteredPalette.push(palette[0]);
-      // Iterate through the rest
-      for (let i = 1; i < palette.length; i++) {
-        // Compare current color to the *last added* color in filteredPalette
-        const distance = calculateColorDistance(palette[i], filteredPalette[filteredPalette.length - 1]);
-        // If the distance is greater than the threshold, keep the color
-        if (distance > maxDistance) {
-          filteredPalette.push(palette[i]);
-        }
-      }
-    }
+    // let filteredPalette = [];
+    // if (palette.length > 0) {
+    //   // Always keep the first color
+    //   filteredPalette.push(palette[0]);
+    //   // Iterate through the rest
+    //   for (let i = 1; i < palette.length; i++) {
+    //     // Compare current color to the *last added* color in filteredPalette
+    //     const distance = calculateColorDistance(palette[i], filteredPalette[filteredPalette.length - 1]);
+    //     // If the distance is greater than the threshold, keep the color
+    //     if (distance > maxDistance) {
+    //       filteredPalette.push(palette[i]);
+    //     }
+    //   }
+    // }
 
     // 2. Map the filtered palette to colorItems
-    setColorItems(filteredPalette.map((color, index) => ({
+    setColorItems(palette.map((color, index) => ({
       id: `${color}-${index}-${Date.now()}`, // Create a unique ID
       color: color,
       isVisible: true, // Default to visible
@@ -843,14 +845,14 @@ function App() {
                     imgHeight={imgHeight}
                   />}
                 </div>
-                {enableCrop ? (
+                {/* {enableCrop ? (
                   <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded  cursor-pointer" onClick={() => setEnableCrop(false)}>
                     Apply Crop
                   </button>
                 ) : (<button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded  cursor-pointer" onClick={() => setEnableCrop(true)}>
                   Crop Image
                 </button>
-                )}
+                )} */}
               </div>
             ) : (
               <div
@@ -864,12 +866,12 @@ function App() {
             )}
 
             {/* Display crop info for debugging - remove later */}
-            {completedCrop && (
+            {/* {completedCrop && (
               <div className="mt-2 p-2 text-xs text-gray-600 bg-gray-100 rounded">
                 <p>Crop: W: {Math.round(completedCrop.width)}px H: {Math.round(completedCrop.height)}px</p>
                 <p>Pos: X: {Math.round(completedCrop.x)}px Y: {Math.round(completedCrop.y)}px</p>
               </div>
-            )}
+            )} */}
 
           </section>
 
@@ -985,7 +987,7 @@ function App() {
                   className="w-full p-2 border border-gray-300 rounded text-base"
                 />
               </div>
-              <div className="flex flex-col gap-1">
+              {/* <div className="flex flex-col gap-1">
                 <label htmlFor="threshold" className="font-semibold text-sm text-gray-700">Threshold: {colorThreshold}</label>
                 <input
                   type="range"
@@ -996,7 +998,7 @@ function App() {
                   onChange={(e) => setColorThreshold(parseInt(e.target.value, 10))}
                   className="w-full cursor-pointer"
                 />
-              </div>
+              </div> */}
               <div className="flex flex-col gap-1">
                 <label htmlFor="blur" className="font-semibold text-sm text-gray-700">Blur: {blurValue}px</label>
                 <input
