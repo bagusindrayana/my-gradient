@@ -308,7 +308,7 @@ function App() {
         const baseFrequency = Math.max(0.05, Math.min(1.0, 0.65 * (600 / previewWidth)));
 
         return `
-      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='${baseFrequency}' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='${opacity}'/%3E%3C/svg%3E")
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 ${imgWidth} ${imgHeight}' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='${baseFrequency}' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='${opacity-(opacity/1.8)}'/%3E%3C/svg%3E")
     `;
     };
 
@@ -561,24 +561,7 @@ function App() {
 
         // Apply filters
         if (blurValue > 0 || saturationValue !== 100 || grainValue > 0) {
-            // Apply blur
-            if (blurValue > 0) {
-                // Create temp canvas for blur
-                const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = width;
-                tempCanvas.height = height;
-                const tempCtx = tempCanvas.getContext('2d');
-
-                // Copy content
-                tempCtx.drawImage(targetCanvas, 0, 0);
-
-                // Apply blur
-                ctx.filter = `blur(${blurValue}px)`;
-                ctx.clearRect(0, 0, width, height);
-                ctx.drawImage(tempCanvas, 0, 0);
-                ctx.filter = 'none';
-            }
-
+           
             // Apply saturation
             if (saturationValue !== 100) {
                 const imageData = ctx.getImageData(0, 0, width, height);
@@ -649,6 +632,25 @@ function App() {
             if (grainValue > 0 && noise2DRef.current) {
                 applyGrainEffect(ctx, targetCanvas, grainValue / 1000);
             }
+
+             // Apply blur
+             if (blurValue > 0) {
+                // Create temp canvas for blur
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+                const tempCtx = tempCanvas.getContext('2d');
+
+                // Copy content
+                tempCtx.drawImage(targetCanvas, 0, 0);
+
+                // Apply blur
+                ctx.filter = `blur(${blurValue}px)`;
+                ctx.clearRect(0, 0, width, height);
+                ctx.drawImage(tempCanvas, 0, 0);
+                ctx.filter = 'none';
+            }
+
         }
     }, [colorItems, colorStops, gradientDirection, blurValue, saturationValue, grainValue, noise2DRef]);
 
@@ -719,37 +721,7 @@ function App() {
 
         // Apply filters manually
         const applyFilters = () => {
-            // Apply blur if specified
-            if (blurValue > 0) {
-                // Save original image data
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-                // We'll use a simple box blur implementation
-                const radius = Math.min(20, Math.max(1, blurValue)); // Limit radius
-
-                // Create a temporary canvas for the blur operation
-                const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = canvas.width;
-                tempCanvas.height = canvas.height;
-                const tempCtx = tempCanvas.getContext('2d');
-
-                // Draw the original image
-                tempCtx.putImageData(imageData, 0, 0);
-
-                // Apply multiple passes of box blur for a better approximation of Gaussian blur
-                for (let i = 0; i < 3; i++) {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.filter = `blur(${radius}px)`;
-                    ctx.drawImage(tempCanvas, 0, 0);
-
-                    // Update the temp canvas for the next iteration
-                    tempCtx.clearRect(0, 0, canvas.width, canvas.height);
-                    tempCtx.drawImage(canvas, 0, 0);
-                }
-
-                // Reset filter
-                ctx.filter = 'none';
-            }
+            
 
             // Apply saturation
             if (saturationValue !== 100) {
@@ -834,6 +806,39 @@ function App() {
 
                 // Apply the grain effect using SimplexNoise
                 applyGrainEffect(ctx, canvas, grainValue / 1000);
+            }
+
+            // Apply blur if specified
+            if (blurValue > 0) {
+
+                // Save original image data
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+                // We'll use a simple box blur implementation
+                const radius = Math.min(20, Math.max(1, blurValue)); // Limit radius
+
+                // Create a temporary canvas for the blur operation
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = canvas.height;
+                const tempCtx = tempCanvas.getContext('2d');
+
+                // Draw the original image
+                tempCtx.putImageData(imageData, 0, 0);
+
+                // Apply multiple passes of box blur for a better approximation of Gaussian blur
+                for (let i = 0; i < 3; i++) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.filter = `blur(${radius}px)`;
+                    ctx.drawImage(tempCanvas, 0, 0);
+
+                    // Update the temp canvas for the next iteration
+                    tempCtx.clearRect(0, 0, canvas.width, canvas.height);
+                    tempCtx.drawImage(canvas, 0, 0);
+                }
+
+                // Reset filter
+                ctx.filter = 'none';
             }
         };
 
