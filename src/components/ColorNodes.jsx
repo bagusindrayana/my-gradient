@@ -65,6 +65,11 @@ function ColorNodes({
       points[index] = `${x},${y}`;
       polyline.setAttribute('points', points.join(' '));
     }
+
+    const nodeId = visibleColors[index]?.id;
+    if (imgRef.current && nodeId) {
+      updateColorFromPosition(nodeId, { x, y });
+    }
   };
 
   const handleNodeDragEnd = (e) => {

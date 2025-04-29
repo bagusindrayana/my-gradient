@@ -255,7 +255,7 @@ body {
 
 /* Gradient display in preview */
 .gradient-preview {
-  border-radius: 12px;
+  /* border-radius: 12px; */
   overflow: hidden;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;

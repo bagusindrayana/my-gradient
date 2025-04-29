@@ -48,10 +48,10 @@ function GradientPreview({
       <h2 className="section-header">
         Result Preview {isLoadingColors && '(Loading colors...)'}
       </h2>
-      <div className='relative overflow-hidden' ref={resultPreviewRef}>
+      <div className='relative bg-gray-300 rounded-lg overflow-hidden' ref={resultPreviewRef}>
         <canvas
           ref={previewCanvasRef}
-          className="gradient-preview w-full min-h-[250px] transition-all duration-300"
+          className="gradient-preview w-full min-h-[250px] transition-all duration-300 "
           style={{
             height: imgHeight || 250,
           }}
