@@ -1,329 +1,124 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-/* Modern, premium UI styles */
+@config "./../tailwind.config.ts";
+
+@custom-variant dark (&:is(.dark *));
+
 :root {
-  --primary-color: #6366f1;
-  --primary-hover: #4f46e5;
-  --primary-light: #e0e7ff;
-  --secondary-color: #f59e0b;
-  --text-primary: #334155;
-  --text-secondary: #64748b;
-  --bg-color: #f5f7fb;
-  --card-bg: #ffffff;
-  --border-color: #e5e7eb;
-  --success-color: #10b981;
-  --error-color: #ef4444;
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+
+  --card: 0 0% 98%;
+  --card-foreground: 240 10% 3.9%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+
+  --primary: 240 10% 3.9%;
+  --primary-foreground: 0 0% 98%;
+
+  --secondary: 240 4.8% 95.9%;
+  --secondary-foreground: 240 5.9% 10%;
+
+  --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 3.8% 46.1%;
+
+  --accent: 240 4.8% 95.9%;
+  --accent-foreground: 240 5.9% 10%;
+
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 222.2 84% 4.9%;
+
+  --radius: 0.25rem;
+
+  --sidebar-background: 0 0% 98%;
+  --sidebar-foreground: 240 5.3% 26.1%;
+  --sidebar-primary: 240 5.9% 10%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 240 4.8% 95.9%;
+  --sidebar-accent-foreground: 240 5.9% 10%;
+  --sidebar-border: 220 13% 91%;
+  --sidebar-ring: 217.2 91.2% 59.8%;
 }
+
+.dark {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+
+  --primary: 0 0% 98%;
+  --primary-foreground: 240 5.9% 10%;
+
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
+
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --ring: 240 4.9% 83.9%;
+  
+  --sidebar-background: 240 5.9% 10%;
+  --sidebar-foreground: 240 4.8% 95.9%;
+  --sidebar-primary: 224.3 76.3% 48%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 240 3.7% 15.9%;
+  --sidebar-accent-foreground: 240 4.8% 95.9%;
+  --sidebar-border: 240 3.7% 15.9%;
+  --sidebar-ring: 217.2 91.2% 59.8%;
+}
+
 
 body {
-  background-color: var(--bg-color);
-  color: var(--text-primary);
-  font-family: 'Inter', system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
+  @apply bg-background text-foreground;
+  font-family: 'Space Mono', monospace;
 }
 
-/* Premium Card Styling */
-.card {
-  background-color: var(--card-bg);
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+.te-container {
+  @apply bg-[#F6F6F7] text-black;
 }
 
-.card:hover {
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+.te-card {
+  @apply bg-white border-none rounded-none shadow-none;
 }
 
-/* Section Headers */
-.section-header {
-  color: var(--text-primary);
-  font-weight: 600;
-  position: relative;
-  padding-bottom: 0.75rem;
-  margin-bottom: 1rem;
+.te-heading {
+  @apply font-mono font-bold uppercase tracking-wider text-sm;
 }
 
-.section-header:after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 2px;
-  width: 40px;
-  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
-  border-radius: 2px;
+.te-label {
+  @apply font-mono text-xs uppercase tracking-wider;
 }
 
-/* Form Controls */
-/* Button */
-.btn {
-  background-color: var(--primary-color);
-  color: white;
-  padding: 0.625rem 1.25rem;
-  border-radius: 8px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  border: none;
-  outline: none;
-  cursor: pointer;
+.te-button {
+  @apply bg-black text-white rounded-none border-none font-mono uppercase text-xs tracking-wider hover:bg-gray-800;
 }
 
-.btn:hover {
-  background-color: var(--primary-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+.te-input {
+  @apply bg-gray-100 border-none rounded-none;
 }
 
-.btn:active {
-  transform: translateY(0);
+.te-slider-track {
+  @apply h-1 bg-gray-300;
 }
 
-.btn:disabled {
-  background-color: #cbd5e1;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.btn-download {
-  background: linear-gradient(135deg, #6366f1, #4f46e5);
-}
-
-.btn-download:hover {
-  background: linear-gradient(135deg, #4f46e5, #4338ca);
-}
-
-/* Input and Select Controls */
-.input, .select {
-  width: 100%;
-  padding: 0.625rem 1rem;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  background-color: white;
-  transition: all 0.2s ease;
-  font-size: 0.875rem;
-  color: var(--text-primary);
-}
-
-.input:focus, .select:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-  outline: none;
-}
-
-.select {
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236366f1'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.5rem center;
-  background-size: 1.5em;
-  padding-right: 2.5rem;
-}
-
-/* Custom Checkbox */
-.checkbox-container {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-}
-
-.custom-checkbox {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 1.125rem;
-  height: 1.125rem;
-  border: 1.5px solid var(--border-color);
-  border-radius: 4px;
-  outline: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-  background-color: white;
-}
-
-.custom-checkbox:checked {
-  background-color: var(--primary-color);
-  border-color: var(--primary-color);
-}
-
-.custom-checkbox:checked::after {
-  content: '✓';
-  position: absolute;
-  color: white;
-  font-size: 0.75rem;
-  font-weight: bold;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.custom-checkbox:focus {
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-}
-
-/* Custom Range Slider */
-.custom-range {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 100%;
-  height: 6px;
-  background: #e2e8f0;
-  border-radius: 3px;
-  outline: none;
-}
-
-.custom-range::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--primary-color);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: 2px solid white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.custom-range::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--primary-color);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: 2px solid white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.custom-range::-webkit-slider-thumb:hover {
-  background: var(--primary-hover);
-  transform: scale(1.15);
-}
-
-.custom-range::-moz-range-thumb:hover {
-  background: var(--primary-hover);
-  transform: scale(1.15);
-}
-
-/* Color item in the sortable list */
-.color-item {
-  display: flex;
-  align-items: center;
-  padding: 0.625rem;
-  border-radius: 8px;
-  margin-bottom: 0.5rem;
-  background-color: white;
-  border: 1px solid var(--border-color);
-  transition: all 0.2s ease;
-}
-
-.color-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.color-item.dragging {
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-  border-color: var(--primary-color);
-  transform: scale(1.02);
-}
-
-.color-swatch {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
-  overflow: hidden;
-}
-
-.drag-handle {
-  cursor: grab;
-  color: var(--text-secondary);
-  transition: color 0.2s ease;
-}
-
-.drag-handle:hover {
-  color: var(--primary-color);
-}
-
-/* Gradient display in preview */
-.gradient-preview {
-  /* border-radius: 12px; */
-  overflow: hidden;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
-  position: relative;
-}
-
-.gradient-preview:hover {
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
-}
-
-/* CSS Code Output */
-.code-output {
-  background-color: #1e293b;
-  color: #e2e8f0;
-  border-radius: 8px;
-  font-family: 'Fira Code', 'Courier New', monospace;
-  font-size: 0.875rem;
-  padding: 1rem;
-  line-height: 1.5;
-  overflow-x: auto;
-}
-
-.code-output .property {
-  color: #94a3b8;
-}
-
-.code-output .value {
-  color: #c4b5fd;
-}
-
-/* Dropzone styling */
-.dropzone {
-  border: 2px dashed var(--border-color);
-  border-radius: 12px;
-  background-color: #f8fafc;
-  transition: all 0.2s ease;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  min-height: 250px;
-}
-
-.dropzone:hover, .dropzone.active {
-  border-color: var(--primary-color);
-  background-color: var(--primary-light);
-}
-
-/* Smooth page transition */
-.page-transition {
-  opacity: 0;
-  animation: fadeIn 0.4s ease forwards;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Helper classes */
-.text-gradient {
-  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.shadow-soft {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+.te-slider-thumb {
+  @apply w-3 h-3 bg-black border-none;
 }

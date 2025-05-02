@@ -1,14 +1,35 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-function GradientSlider({ colorItems, colorStops, setColorStops, gradientDirection, showGradientStops }) {
-    const [visibleColors, setVisibleColors] = useState([]);
-    const [visibleStops, setVisibleStops] = useState([]);
-    const [visibleIndices, setVisibleIndices] = useState([]);
-    useEffect(() => {
+interface ColorItem {
+  id: string;
+  color: string;
+  isVisible: boolean;
+}
 
-        var newVisibleColors = colorItems.filter(item => item.isVisible);
-        var newVisibleStops = [];
-        var newVisibleIndices = [];
+interface GradientSliderProps {
+  colorItems: ColorItem[];
+  colorStops: number[];
+  setColorStops: (stops: number[]) => void;
+  gradientDirection: string;
+}
+
+interface DragState {
+  isDragging: boolean;
+  nodeIndex: number;
+  originalIndex: number;
+  stopValue: number;
+}
+
+function GradientSlider({ colorItems, colorStops, setColorStops, gradientDirection }: GradientSliderProps) {
+    const [visibleColors, setVisibleColors] = useState<ColorItem[]>([]);
+    const [visibleStops, setVisibleStops] = useState<number[]>([]);
+    const [visibleIndices, setVisibleIndices] = useState<number[]>([]);
+    
+    useEffect(() => {
+        const newVisibleColors = colorItems.filter(item => item.isVisible);
+        const newVisibleStops: number[] = [];
+        const newVisibleIndices: number[] = [];
+        
         for (let i = 0; i < newVisibleColors.length; i++) {
             const colorItem = newVisibleColors[i];
             const originalIndex = colorItems.findIndex(item => item.id === colorItem.id);
@@ -23,7 +44,7 @@ function GradientSlider({ colorItems, colorStops, setColorStops, gradientDirecti
         setVisibleColors(newVisibleColors);
     }, [colorStops, colorItems]);
 
-    if (!colorItems.length || !showGradientStops) return null;
+    if (!colorItems.length) return null;
 
     // // Filter to only visible colors
     // const visibleColors = colorItems.filter(item => item.isVisible);
@@ -67,7 +88,7 @@ function GradientSlider({ colorItems, colorStops, setColorStops, gradientDirecti
     });
 
     // Handle node dragging
-    const handleNodeDragStart = (e, index, originalIndex) => {
+    const handleNodeDragStart = (e: React.MouseEvent<SVGCircleElement>, index: number, originalIndex: number) => {
         e.preventDefault();
         e.stopPropagation();
 
@@ -77,14 +98,14 @@ function GradientSlider({ colorItems, colorStops, setColorStops, gradientDirecti
             nodeIndex: index,
             originalIndex: originalIndex,
             stopValue: colorStops[originalIndex] || 0
-        };
+        } as DragState;
 
         // Add event listeners to window to ensure we capture all mouse movements
-        window.addEventListener('mousemove', handleNodeDrag);
-        window.addEventListener('mouseup', handleNodeDragEnd);
+        window.addEventListener('mousemove', handleNodeDrag as EventListener);
+        window.addEventListener('mouseup', handleNodeDragEnd as EventListener);
     };
 
-    const handleNodeDrag = useCallback((e) => {
+    const handleNodeDrag = useCallback((e: MouseEvent) => {
         if (!dragRef.current.isDragging) return;
 
         const svg = document.querySelector('.gradient-slider');
@@ -315,4 +336,4 @@ function GradientSlider({ colorItems, colorStops, setColorStops, gradientDirecti
     );
 }
 
-export default GradientSlider; 
+export default GradientSlider;

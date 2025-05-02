@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import './App.css';
 import { createNoise2D } from 'simplex-noise';
+import type { NoiseFunction2D } from 'simplex-noise';
 
 // Import components
 import ImageUpload from './components/ImageUpload';
@@ -11,46 +12,66 @@ import ColorList from './components/ColorList';
 import GradientSettings from './components/GradientSettings';
 import Download from './components/Download';
 
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { ArrowDown, Square, Circle, Grid, DownloadIcon, Image as ImageIcon } from "lucide-react";
+
 import {
     arrayMove,
 } from '@dnd-kit/sortable';
+import SortColor from './components/SortColor';
+
+interface ColorItem {
+    id: string;
+    color: string;
+    isVisible: boolean;
+}
+
+interface Point {
+    x: number;
+    y: number;
+}
+
+interface DownloadSize {
+    width: number;
+    height: number;
+}
 
 function App() {
-    const [imgSrc, setImgSrc] = useState('');
-    const imgRef = useRef(null);
-    const [imgWidth, setImgWidth] = useState(0);
-    const [imgHeight, setImgHeight] = useState(0);
-    const imgUploadCanvas = useRef(null);
-    // Use a state that holds objects with id, color, and visibility
-    const [colorItems, setColorItems] = useState([]);
-    const [isLoadingColors, setIsLoadingColors] = useState(false);
-    // Gradient Settings State
-    const [gradientDirection, setGradientDirection] = useState('to bottom');
-    const [colorCount, setColorCount] = useState(3); // Default: 3 colors
-    // Color stops state (percentage position in the gradient)
-    const [colorStops, setColorStops] = useState([]);
-    // Show gradient stops slider toggle
-    const [showGradientStops, setShowGradientStops] = useState(true);
-    // Effects State
-    const [blurValue, setBlurValue] = useState(0); // 0px blur initially
-    const [saturationValue, setSaturationValue] = useState(100); // 100% saturation initially
-    const [grainValue, setGrainValue] = useState(0); // 0% grain initially
-    // Color sample points state
-    const [colorSamplePoints, setColorSamplePoints] = useState([]);
-    // Show color nodes toggle
-    const [showColorNodes, setShowColorNodes] = useState(true);
-    // CSS Code Result State
-    const [cssCodeResult, setCssCodeResult] = useState('');
+    const [imgSrc, setImgSrc] = useState<string>('');
+    const imgRef = useRef<HTMLImageElement>(null);
+    const [imgWidth, setImgWidth] = useState<number>(0);
+    const [imgHeight, setImgHeight] = useState<number>(0);
+    const imgUploadCanvas = useRef<HTMLCanvasElement>(null);
+    const imgUploadCanvasContext = useRef<CanvasRenderingContext2D>(null);
+    const [colorItems, setColorItems] = useState<ColorItem[]>([]);
+    const [isLoadingColors, setIsLoadingColors] = useState<boolean>(false);
+    const [gradientDirection, setGradientDirection] = useState<string>('to bottom');
+    const [colorCount, setColorCount] = useState<number>(3);
+    const [colorStops, setColorStops] = useState<number[]>([]);
+  
+    const [blurValue, setBlurValue] = useState<number>(0);
+    const [saturationValue, setSaturationValue] = useState<number>(100);
+    const [grainValue, setGrainValue] = useState<number>(0);
+    const [colorSamplePoints, setColorSamplePoints] = useState<Point[]>([]);
+    
+    const [cssCodeResult, setCssCodeResult] = useState<string>('');
+    const [palette, setPalette] = useState<string[]>([]);
+    const [downloadSize, setDownloadSize] = useState<DownloadSize>({
+        width: 1920,
+        height: 1080
+    });
+    const resultPreviewRef = useRef<HTMLDivElement>(null);
+    const previewCanvasRef = useRef<HTMLCanvasElement>(null);
+    const noise2DRef = useRef<NoiseFunction2D | null>(null);
 
-    const [palette, setPalette] = useState([]); // State to hold extracted colors
-
-    // Add state for download options
-    const [downloadSize, setDownloadSize] = useState({ width: 1920, height: 1080 });
-    const resultPreviewRef = useRef(null);
-    const previewCanvasRef = useRef(null);
-
-    // Reference for the noise function
-    const noise2DRef = useRef(null);
+    const [sortBy, setSortBy] = useState<string>('default');
 
     // Initialize SimplexNoise on component mount
     useEffect(() => {
@@ -58,31 +79,9 @@ function App() {
         noise2DRef.current = createNoise2D();
     }, []);
 
-    // --- Helper Function: Calculate Color Distance ---
-    function calculateColorDistance(rgbString1, rgbString2) {
-        const parseRgb = (rgbStr) => {
-            const match = rgbStr.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-            if (!match) return null;
-            return { r: parseInt(match[1]), g: parseInt(match[2]), b: parseInt(match[3]) };
-        };
 
-        const rgb1 = parseRgb(rgbString1);
-        const rgb2 = parseRgb(rgbString2);
 
-        if (!rgb1 || !rgb2) return Infinity; // Cannot compare if parsing fails
-
-        // Simple Euclidean distance in RGB space
-        const dist = Math.sqrt(
-            Math.pow(rgb1.r - rgb2.r, 2) +
-            Math.pow(rgb1.g - rgb2.g, 2) +
-            Math.pow(rgb1.b - rgb2.b, 2)
-        );
-        // Max distance is sqrt(3 * 255^2) ≈ 441.67
-        return dist;
-    }
-    // --- End Helper Function ---
-
-    function onImageLoad(e) {
+    function onImageLoad(e: any) {
         imgRef.current = e.currentTarget; // Store image ref
         setImgWidth(e.currentTarget.width);
         setImgHeight(e.currentTarget.height);
@@ -93,6 +92,11 @@ function App() {
             imgUploadCanvas.current = document.createElement('canvas');
             imgUploadCanvas.current.width = imgRef.current.naturalWidth;
             imgUploadCanvas.current.height = imgRef.current.naturalHeight;
+            imgUploadCanvasContext.current = imgUploadCanvas.current.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
+            // Draw the image to the canvas
+            imgUploadCanvasContext.current.drawImage(imgRef.current, 0, 0, imgUploadCanvas.current.width, imgUploadCanvas.current.height);
+        
+            
 
             extractColorsFromImage(imgRef.current, colorCount);
         }
@@ -101,7 +105,7 @@ function App() {
     // --- Color Extraction Logic ---
 
     // Placeholder function to get average color of a canvas area
-    function getAverageColor(canvas, ctx) {
+    function getAverageColor(canvas: any, ctx: any) {
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
         let r = 0, g = 0, b = 0;
@@ -127,7 +131,7 @@ function App() {
     }
 
     // Function to extract colors from the entire image
-    async function extractColorsFromImage(image, maxColors = 5) {
+    async function extractColorsFromImage(image: any, maxColors = 5) {
         if (!image) {
             console.error('Invalid image ref for color extraction.');
             return;
@@ -136,15 +140,13 @@ function App() {
         setIsLoadingColors(true);
 
         try {
-            const canvas = imgUploadCanvas.current;
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const canvas = imgUploadCanvas.current as HTMLCanvasElement;
+            const ctx = imgUploadCanvasContext.current;
+            if(ctx == null){
+                return;
+            }
 
-            // Set canvas dimensions to match image
-            canvas.width = image.naturalWidth;
-            canvas.height = image.naturalHeight;
-
-            // Draw the image to the canvas
-            ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+           
 
             // Determine how many colors to sample
             const actualMaxColors = Math.min(maxColors, canvas.height);
@@ -222,21 +224,8 @@ function App() {
         }
     }
 
-    // Effect to trigger color extraction when crop is complete
-    useEffect(() => {
-        if (
-            imgRef.current
-        ) {
-            setImgHeight(imgRef.current.height);
-            setImgWidth(imgRef.current.width);
-        } else {
-            // Reset palette if crop is invalid or no image
-            setPalette([]);
-        }
-    }, [imgSrc]);// Add dependencies if they affect extraction
-
     // --- Toggle Color Visibility ---
-    const toggleColorVisibility = (id) => {
+    const toggleColorVisibility = (id: string) => {
         setColorItems(items =>
             items.map(item =>
                 item.id === id ? { ...item, isVisible: !item.isVisible } : item
@@ -308,7 +297,7 @@ function App() {
         const baseFrequency = Math.max(0.05, Math.min(1.0, 0.65 * (600 / previewWidth)));
 
         return `
-      url("data:image/svg+xml,%3Csvg viewBox='0 0 ${imgWidth} ${imgHeight}' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='${baseFrequency}' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='${opacity-(opacity/1.8)}'/%3E%3C/svg%3E")
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 ${imgWidth} ${imgHeight}' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='${baseFrequency}' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='${opacity - (opacity / 1.8)}'/%3E%3C/svg%3E")
     `;
     };
 
@@ -345,16 +334,16 @@ function App() {
         generateCssCode();
     }, [gradientCss, filterCss, colorStops, grainValue]); // Add grainValue as dependency
 
-    const pickColor = (position) => {
+    const pickColor = (position: any) => {
         if (!imgRef.current || !imgUploadCanvas.current) return;
 
         try {
             // Create a small canvas to sample the color
             const canvas = imgUploadCanvas.current;
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-            // Draw the image to the canvas
-            ctx.drawImage(imgRef.current, 0, 0, canvas.width, canvas.height);
+            const ctx = imgUploadCanvasContext.current;
+            if(ctx == null){
+                return;
+            }
 
             // Calculate the position in the actual image
             const scaleX = canvas.width / imgRef.current.width;
@@ -402,7 +391,7 @@ function App() {
     }
 
     // Function to update a color item's color based on a position in the image
-    const updateColorFromPosition = (colorId, position) => {
+    const updateColorFromPosition = (colorId: string, position: any) => {
         if (!imgRef.current) return;
 
         try {
@@ -435,7 +424,7 @@ function App() {
     };
 
     // Apply grain effect using SimplexNoise
-    const applyGrainEffect = (ctx, canvas, intensity) => {
+    const applyGrainEffect = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, intensity: number) => {
         if (!noise2DRef.current) return;
 
         // Get the image data to process
@@ -487,10 +476,10 @@ function App() {
     };
 
     // Function to render gradient and effects to a canvas
-    const renderGradientToCanvas = useCallback((targetCanvas, width, height) => {
+    const renderGradientToCanvas = useCallback((targetCanvas: HTMLCanvasElement, width: number, height: number) => {
         if (!targetCanvas) return;
 
-        const ctx = targetCanvas.getContext('2d');
+        const ctx = targetCanvas.getContext('2d') as CanvasRenderingContext2D;
 
         // Set canvas dimensions if needed
         if (targetCanvas.width !== width || targetCanvas.height !== height) {
@@ -506,13 +495,13 @@ function App() {
 
         if (visibleColors.length === 0) {
             // Draw placeholder if no colors
-            ctx.fillStyle = '#f0f0f0';
-            ctx.fillRect(0, 0, width, height);
-            ctx.fillStyle = '#cccccc';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.font = '16px sans-serif';
-            ctx.fillText('Upload an image to see the preview', width / 2, height / 2);
+            // ctx.fillStyle = '#f0f0f0';
+            // ctx.fillRect(0, 0, width, height);
+            // ctx.fillStyle = '#cccccc';
+            // ctx.textAlign = 'center';
+            // ctx.textBaseline = 'middle';
+            // ctx.font = '16px sans-serif';
+            // ctx.fillText('Upload an image to see the preview', width / 2, height / 2);
             return;
         }
 
@@ -561,7 +550,7 @@ function App() {
 
         // Apply filters
         if (blurValue > 0 || saturationValue !== 100 || grainValue > 0) {
-           
+
             // Apply saturation
             if (saturationValue !== 100) {
                 const imageData = ctx.getImageData(0, 0, width, height);
@@ -589,7 +578,9 @@ function App() {
                             case b: h = (r - g) / d + 4; break;
                         }
 
-                        h /= 6;
+                        if (h != undefined) {
+                            h /= 6;
+                        }
                     }
 
                     // Adjust saturation
@@ -597,7 +588,7 @@ function App() {
                     s = Math.max(0, Math.min(1, s)); // Clamp between 0 and 1
 
                     // Convert back to RGB
-                    function hue2rgb(p, q, t) {
+                    function hue2rgb(p: number, q: number, t: number) {
                         if (t < 0) t += 1;
                         if (t > 1) t -= 1;
                         if (t < 1 / 6) return p + (q - p) * 6 * t;
@@ -608,21 +599,23 @@ function App() {
 
                     let r1, g1, b1;
 
-                    if (s === 0) {
-                        r1 = g1 = b1 = l; // achromatic
-                    } else {
-                        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-                        const p = 2 * l - q;
+                    if (h != undefined) {
+                        if (s === 0) {
+                            r1 = g1 = b1 = l; // achromatic
+                        } else {
+                            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                            const p = 2 * l - q;
 
-                        r1 = hue2rgb(p, q, h + 1 / 3);
-                        g1 = hue2rgb(p, q, h);
-                        b1 = hue2rgb(p, q, h - 1 / 3);
+                            r1 = hue2rgb(p, q, h + 1 / 3);
+                            g1 = hue2rgb(p, q, h);
+                            b1 = hue2rgb(p, q, h - 1 / 3);
+                        }
+
+                        // Set values back
+                        data[i] = Math.round(r1 * 255);
+                        data[i + 1] = Math.round(g1 * 255);
+                        data[i + 2] = Math.round(b1 * 255);
                     }
-
-                    // Set values back
-                    data[i] = Math.round(r1 * 255);
-                    data[i + 1] = Math.round(g1 * 255);
-                    data[i + 2] = Math.round(b1 * 255);
                 }
 
                 ctx.putImageData(imageData, 0, 0);
@@ -633,13 +626,13 @@ function App() {
                 applyGrainEffect(ctx, targetCanvas, grainValue / 1000);
             }
 
-             // Apply blur
-             if (blurValue > 0) {
+            // Apply blur
+            if (blurValue > 0) {
                 // Create temp canvas for blur
                 const tempCanvas = document.createElement('canvas');
                 tempCanvas.width = width;
                 tempCanvas.height = height;
-                const tempCtx = tempCanvas.getContext('2d');
+                const tempCtx = tempCanvas.getContext('2d') as CanvasRenderingContext2D;
 
                 // Copy content
                 tempCtx.drawImage(targetCanvas, 0, 0);
@@ -665,7 +658,7 @@ function App() {
         const canvas = document.createElement('canvas');
         canvas.width = downloadSize.width;
         canvas.height = downloadSize.height;
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 
         // Draw gradient directly on canvas
         const drawGradient = () => {
@@ -721,7 +714,7 @@ function App() {
 
         // Apply filters manually
         const applyFilters = () => {
-            
+
 
             // Apply saturation
             if (saturationValue !== 100) {
@@ -738,52 +731,54 @@ function App() {
                     const min = Math.min(r, g, b);
                     let h, s, l = (max + min) / 2;
 
-                    if (max === min) {
-                        h = s = 0; // achromatic
-                    } else {
-                        const d = max - min;
-                        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                    if (h != undefined) {
+                        if (max === min) {
+                            h = s = 0; // achromatic
+                        } else {
+                            const d = max - min;
+                            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
 
-                        switch (max) {
-                            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                            case g: h = (b - r) / d + 2; break;
-                            case b: h = (r - g) / d + 4; break;
+                            switch (max) {
+                                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                                case g: h = (b - r) / d + 2; break;
+                                case b: h = (r - g) / d + 4; break;
+                            }
+
+                            h /= 6;
                         }
 
-                        h /= 6;
+                        // Adjust saturation
+                        s = s * (saturationValue / 100);
+                        s = Math.max(0, Math.min(1, s)); // Clamp between 0 and 1
+
+                        // Convert back to RGB
+                        function hue2rgb(p: number, q: number, t: number) {
+                            if (t < 0) t += 1;
+                            if (t > 1) t -= 1;
+                            if (t < 1 / 6) return p + (q - p) * 6 * t;
+                            if (t < 1 / 2) return q;
+                            if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+                            return p;
+                        }
+
+                        let r1, g1, b1;
+
+                        if (s === 0) {
+                            r1 = g1 = b1 = l; // achromatic
+                        } else {
+                            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                            const p = 2 * l - q;
+
+                            r1 = hue2rgb(p, q, h + 1 / 3);
+                            g1 = hue2rgb(p, q, h);
+                            b1 = hue2rgb(p, q, h - 1 / 3);
+                        }
+
+                        // Set the values back
+                        data[i] = Math.round(r1 * 255);
+                        data[i + 1] = Math.round(g1 * 255);
+                        data[i + 2] = Math.round(b1 * 255);
                     }
-
-                    // Adjust saturation
-                    s = s * (saturationValue / 100);
-                    s = Math.max(0, Math.min(1, s)); // Clamp between 0 and 1
-
-                    // Convert back to RGB
-                    function hue2rgb(p, q, t) {
-                        if (t < 0) t += 1;
-                        if (t > 1) t -= 1;
-                        if (t < 1 / 6) return p + (q - p) * 6 * t;
-                        if (t < 1 / 2) return q;
-                        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-                        return p;
-                    }
-
-                    let r1, g1, b1;
-
-                    if (s === 0) {
-                        r1 = g1 = b1 = l; // achromatic
-                    } else {
-                        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-                        const p = 2 * l - q;
-
-                        r1 = hue2rgb(p, q, h + 1 / 3);
-                        g1 = hue2rgb(p, q, h);
-                        b1 = hue2rgb(p, q, h - 1 / 3);
-                    }
-
-                    // Set the values back
-                    data[i] = Math.round(r1 * 255);
-                    data[i + 1] = Math.round(g1 * 255);
-                    data[i + 2] = Math.round(b1 * 255);
                 }
 
                 ctx.putImageData(imageData, 0, 0);
@@ -795,7 +790,7 @@ function App() {
                 const tempCanvas = document.createElement('canvas');
                 tempCanvas.width = canvas.width;
                 tempCanvas.height = canvas.height;
-                const tempCtx = tempCanvas.getContext('2d');
+                const tempCtx = tempCanvas.getContext('2d') as CanvasRenderingContext2D;
                 tempCtx.drawImage(canvas, 0, 0);
 
                 // Clear canvas for new composite
@@ -821,7 +816,7 @@ function App() {
                 const tempCanvas = document.createElement('canvas');
                 tempCanvas.width = canvas.width;
                 tempCanvas.height = canvas.height;
-                const tempCtx = tempCanvas.getContext('2d');
+                const tempCtx = tempCanvas.getContext('2d') as CanvasRenderingContext2D;
 
                 // Draw the original image
                 tempCtx.putImageData(imageData, 0, 0);
@@ -857,6 +852,135 @@ function App() {
         link.click();
     };
 
+    // Convert RGB to HSL
+    function rgbToHsl(r:number, g:number, b:number) {
+        r /= 255;
+        g /= 255;
+        b /= 255;
+        
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        let h, s, l = (max + min) / 2;
+        
+        if (max === min) {
+            h = s = 0; // achromatic
+        } else {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            
+            switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+            
+            if(h != undefined){
+                h /= 6;
+            }
+        }
+        
+        return { h: (h??0) * 360, s: s * 100, l: l * 100 };
+    }
+    
+    // RGB to Hex conversion
+    function rgbToHex(r:number, g:number, b:number) {
+        return '#' + [r, g, b].map(x => {
+            const hex = x.toString(16);
+            return hex.length === 1 ? '0' + hex : hex;
+        }).join('');
+    }
+    
+    // Quantize colors (simplified k-means approach)
+    function quantizeColors(pixels:any, numColors:number) {
+        // Initialize clusters with random pixels
+        const clusters = [];
+        const pixelCount = pixels.length / 4;
+        
+        for (let i = 0; i < numColors; i++) {
+            const randomIndex = Math.floor(Math.random() * pixelCount) * 4;
+            clusters.push({
+                r: pixels[randomIndex],
+                g: pixels[randomIndex + 1],
+                b: pixels[randomIndex + 2],
+                count: 0,
+                rSum: 0,
+                gSum: 0,
+                bSum: 0,
+                h: 0,
+                s: 0,
+                l: 0,
+                hex: ''
+            });
+        }
+        
+        // Iterate a few times for better convergence
+        for (let iteration = 0; iteration < 5; iteration++) {
+            // Reset counts and sums
+            for (let i = 0; i < clusters.length; i++) {
+                clusters[i].count = 0;
+                clusters[i].rSum = 0;
+                clusters[i].gSum = 0;
+                clusters[i].bSum = 0;
+            }
+            
+            // Assign pixels to clusters
+            for (let i = 0; i < pixels.length; i += 4) {
+                const r = pixels[i];
+                const g = pixels[i + 1];
+                const b = pixels[i + 2];
+                const a = pixels[i + 3];
+                
+                // Skip transparent pixels
+                if (a < 128) continue;
+                
+                let minDistance = Number.MAX_VALUE;
+                let closestCluster = 0;
+                
+                // Find closest cluster
+                for (let j = 0; j < clusters.length; j++) {
+                    const cluster = clusters[j];
+                    const dr = cluster.r - r;
+                    const dg = cluster.g - g;
+                    const db = cluster.b - b;
+                    const distance = dr * dr + dg * dg + db * db;
+                    
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestCluster = j;
+                    }
+                }
+                
+                // Add to closest cluster
+                clusters[closestCluster].count++;
+                clusters[closestCluster].rSum = (clusters[closestCluster].rSum || 0) + r;
+                clusters[closestCluster].gSum = (clusters[closestCluster].gSum || 0) + g;
+                clusters[closestCluster].bSum = (clusters[closestCluster].bSum || 0) + b;
+            }
+            
+            // Update cluster centers
+            for (let i = 0; i < clusters.length; i++) {
+                if (clusters[i].count > 0) {
+                    clusters[i].r = Math.round(clusters[i].rSum / clusters[i].count);
+                    clusters[i].g = Math.round(clusters[i].gSum / clusters[i].count);
+                    clusters[i].b = Math.round(clusters[i].bSum / clusters[i].count);
+                }
+            }
+        }
+        
+        // Filter out unused clusters and add HSL values
+        const usedClusters = clusters.filter(cluster => cluster.count > 0);
+        
+        usedClusters.forEach(cluster => {
+            const hsl = rgbToHsl(cluster.r, cluster.g, cluster.b);
+            cluster.h = hsl.h;
+            cluster.s = hsl.s;
+            cluster.l = hsl.l;
+            cluster.hex = rgbToHex(cluster.r, cluster.g, cluster.b);
+        });
+        
+        return usedClusters;
+    }
+
     // Function to reset the image and all related values
     const resetImage = () => {
         setImgSrc('');
@@ -872,7 +996,7 @@ function App() {
         setGrainValue(0);
     };
 
-    const handleColorListChange = (oldIndex, newIndex) => {
+    const handleColorListChange = (oldIndex: number, newIndex: number) => {
 
         //setColorItems((items) => arrayMove(items, oldIndex, newIndex));
         console.log("oldIndex", oldIndex);
@@ -916,46 +1040,59 @@ function App() {
         if (palette.length > 0 && colorItems.length > 0 && imgRef.current) {
             const currentCount = colorItems.length;
 
-            // If we need to add more colors
-            if (colorCount > currentCount) {
-                if (imgUploadCanvas.current) {
-                    extractColorsFromImage(imgRef.current, colorCount);
-                }
-            } else {
-                //remove colors
-                setPalette(prev => prev.slice(0, colorCount));
-                setColorSamplePoints(prev => prev.slice(0, colorCount));
+            if (imgUploadCanvas.current) {
+                extractColorsFromImage(imgRef.current, colorCount);
             }
+
+            // If we need to add more colors
+            // if (colorCount > currentCount) {
+            //     if (imgUploadCanvas.current) {
+            //         extractColorsFromImage(imgRef.current, colorCount);
+            //     }
+            // } else {
+            //     //remove colors
+            //     setPalette(prev => prev.slice(0, colorCount));
+            //     setColorSamplePoints(prev => prev.slice(0, colorCount));
+            // }
         }
     }, [colorCount, imgRef.current]);
 
     return (
-        <div className="w-full mx-auto p-5 page-transition">
-            <header className="text-center mb-5 p-4 card">
-                <h1 className="text-xl font-bold text-gradient">Image to Gradient Generator</h1>
-            </header>
-            <main className="grid grid-cols-1 md:grid-cols-5 gap-5">
-                <div className="col-span-1 md:col-span-2 flex flex-col gap-5">
+        <div className='h-auto md:h-screen w-full flex justify-center items-center'>
+            <div className="p-2 bg-[#F6F6F7] max-w-7xl mx-auto">
+            <Card className="mb-2 te-card">
+                <CardContent className="p-4 text-center">
+                    <h1 className="text-xl font-mono font-bold uppercase tracking-wider">IM—{'>'}GRAD</h1>
+                </CardContent>
+            </Card>
+            <main className="grid grid-cols-1 md:grid-cols-5 gap-2">
+                <div className="col-span-1 md:col-span-2 flex flex-col gap-2">
                     {/* Image Upload Section */}
                     <ImageUpload
                         imgSrc={imgSrc}
                         setImgSrc={setImgSrc}
-                        imgRef={imgRef}
+                        imgRef={imgRef as React.RefObject<HTMLImageElement>}
                         onImageLoad={onImageLoad}
                         imgWidth={imgWidth}
                         imgHeight={imgHeight}
                         colorItems={colorItems}
                         colorSamplePoints={colorSamplePoints}
-                        showColorNodes={showColorNodes}
-                        setShowColorNodes={setShowColorNodes}
                         resetImage={resetImage}
                         updateColorFromPosition={updateColorFromPosition}
                     />
 
+                    {/* Gradient Settings Section */}
+                    <GradientSettings
+                        gradientDirection={gradientDirection}
+                        setGradientDirection={setGradientDirection}
+                        colorCount={colorCount}
+                        setColorCount={setColorCount}
+                    />
+
                     {/* CSS Code Section */}
-                    <CssCode cssCodeResult={cssCodeResult} />
+                    {/* <CssCode cssCodeResult={cssCodeResult} /> */}
                 </div>
-                <div className='col-span-1 md:col-span-2 flex flex-col gap-5'>
+                <div className='col-span-1 md:col-span-2 flex flex-col gap-2'>
                     {/* Gradient Preview Section */}
                     <GradientPreview
                         colorItems={colorItems}
@@ -964,8 +1101,6 @@ function App() {
                         gradientDirection={gradientDirection}
                         imgHeight={imgHeight}
                         isLoadingColors={isLoadingColors}
-                        showGradientStops={showGradientStops}
-                        setShowGradientStops={setShowGradientStops}
                         renderGradientToCanvas={renderGradientToCanvas}
                     />
 
@@ -979,7 +1114,7 @@ function App() {
                         setGrainValue={setGrainValue}
                     />
                 </div>
-                <div className="col-span-1 flex flex-col gap-5">
+                <div className="col-span-1 flex flex-col gap-2">
                     {/* Color List Section */}
                     <ColorList
                         colorItems={colorItems}
@@ -989,13 +1124,7 @@ function App() {
                         onChange={handleColorListChange}
                     />
 
-                    {/* Gradient Settings Section */}
-                    <GradientSettings
-                        gradientDirection={gradientDirection}
-                        setGradientDirection={setGradientDirection}
-                        colorCount={colorCount}
-                        setColorCount={setColorCount}
-                    />
+                    <SortColor sortBy={sortBy} setSortBy={setSortBy}></SortColor>
 
                     {/* Download Section */}
                     <Download
@@ -1007,7 +1136,8 @@ function App() {
                 </div>
             </main>
         </div>
+        </div>
     );
 }
 
-export default App; 
+export default App;

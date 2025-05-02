@@ -1,0 +1,202 @@
+import React from 'react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { CheckIcon, GripVerticalIcon } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+interface ColorItem {
+  id: string;
+  color: string;
+  isVisible: boolean;
+}
+
+interface ColorListProps {
+  colorItems: ColorItem[];
+  isLoadingColors: boolean;
+  toggleColorVisibility: (id: string) => void;
+  onChange: (oldIndex: number, newIndex: number) => void;
+}
+
+interface SortableColorItemProps {
+  id: string;
+  color: string;
+  isVisible: boolean;
+  toggleVisibility: (id: string) => void;
+}
+
+function ColorList({
+  colorItems,
+  isLoadingColors,
+  toggleColorVisibility,
+  onChange
+}: ColorListProps) {
+  // --- Drag and Drop Setup ---
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+
+    if (!over) return;
+    if (active.id === over.id) return;
+
+    // Get the old and new indices
+    const oldIndex = colorItems.findIndex(item => item.id === active.id);
+    const newIndex = colorItems.findIndex(item => item.id === over.id);
+
+    onChange(oldIndex, newIndex);
+  }
+
+  return (
+    <Card className="te-card p-1">
+      <CardContent className="p-1 gap-1">
+        <Tabs defaultValue="effects">
+          <TabsList className="w-full grid grid-cols-2 bg-gray-100 rounded-none">
+            <TabsTrigger value="effects" className="te-label data-[state=active]:bg-black data-[state=active]:text-white rounded-none">COLOR LIST {isLoadingColors && '(Loading...)'}</TabsTrigger>
+            <TabsTrigger value="download" className="te-label data-[state=active]:bg-black data-[state=active]:text-white rounded-none">COLOR PALETTE {isLoadingColors && '(Loading...)'}</TabsTrigger>
+          </TabsList>
+          <TabsContent value="effects" className="space-y-2">
+            <div className="bg-gray-100 border border-gray-200 p-0 min-h-[200px]">
+              {colorItems.length > 0 ? (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={colorItems} // Pass items with unique IDs
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="divide-y divide-gray-200">
+                      {colorItems.map(item => (
+                        <SortableColorItem
+                          key={item.id}
+                          id={item.id}
+                          color={item.color}
+                          isVisible={item.isVisible}
+                          toggleVisibility={toggleColorVisibility}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              ) : (
+                <div className="min-h-[200px] flex items-center justify-center text-gray-600 text-center text-sm">
+                  {isLoadingColors ? 'Loading...' : 'No colors extracted yet.'}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+          <TabsContent value="download">
+            <div className="bg-gray-100 border border-gray-200 p-0 min-h-[200px]">
+              {colorItems.length > 0 ? (
+                <div className="grid grid-cols-3">
+                  {colorItems.map(item => (
+                    <div className='w-full h-10 px-4 py-2' style={{ backgroundColor: item.color, opacity: !item.isVisible ? 0.3 : 1 }}>
+
+                    </div>
+                ))}
+                </div>
+              ) : (
+                <div className="min-h-[200px] flex items-center justify-center text-gray-600 text-center text-sm">
+                  {isLoadingColors ? 'Loading...' : 'No colors extracted yet.'}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
+
+      </CardContent>
+    </Card>
+  );
+}
+
+// --- Sortable Color Item Component ---
+function SortableColorItem({ id, color, isVisible, toggleVisibility }: SortableColorItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging, // Added to style the item while dragging
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}
+      className={`flex items-center py-2 px-2 bg-white ${isDragging ? 'dragging' : ''} ${!isVisible ? 'opacity-50' : ''}`}
+      {...attributes}>
+      <div className="flex items-center flex-1" >
+        <GripVerticalIcon className="h-4 w-4 text-gray-400 mr-2 cursor-move " {...listeners} />
+        <div
+          className="h-6 w-6 rounded-sm mr-2"
+          style={{ backgroundColor: color, opacity: !isVisible ? 0.3 : 1 }}
+        ></div>
+        <span className="font-mono text-xs">{color}</span>
+      </div>
+      <Checkbox
+        id="showGradientStops"
+        checked={isVisible}
+        onCheckedChange={(checked: boolean) => toggleVisibility(id)}
+        className="rounded-none border-black"
+      />
+
+    </div>
+    // <li
+    //   ref={setNodeRef}
+    //   style={style}
+    //   className={`color-item ${isDragging ? 'dragging' : ''} ${!isVisible ? 'opacity-50' : ''}`}
+    //   {...attributes} // Spread attributes for a11y etc.
+    // >
+    //   <span
+    //     className="drag-handle px-1"
+    //     {...listeners} // Spread listeners onto the handle
+    //     title="Drag to reorder"
+    //   >
+    //     ☰
+    //   </span>
+    //   <span
+    //     className="color-swatch ml-2"
+    //     style={{ backgroundColor: color, opacity: !isVisible ? 0.3 : 1 }}
+    //   ></span>
+    //   <span className="flex-grow ml-2 font-mono text-sm">{color}</span>
+    //   <input
+    //     type="checkbox"
+    //     checked={isVisible}
+    //     onChange={() => toggleVisibility(id)}
+    //     title="Show/Hide Color"
+    //     className="custom-checkbox ml-auto"
+    //   />
+    // </li>
+  );
+}
+
+export default ColorList;

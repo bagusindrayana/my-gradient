@@ -1,7 +1,11 @@
 import React from 'react';
 
-function CssCode({ cssCodeResult }) {
-  const cssResultContainerRef = React.useRef(null);
+interface CssCodeProps {
+  cssCodeResult: string;
+}
+
+function CssCode({ cssCodeResult }: CssCodeProps) {
+  const cssResultContainerRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     if (cssResultContainerRef.current) {
       cssResultContainerRef.current.setAttribute('style', cssCodeResult);
@@ -22,4 +26,4 @@ function CssCode({ cssCodeResult }) {
   );
 }
 
-export default CssCode; 
+export default CssCode;

@@ -1,5 +1,29 @@
 import React from 'react';
 
+interface SamplePoint {
+  x: number;
+  y: number;
+}
+
+interface Position {
+  x: number;
+  y: number;
+}
+
+interface ColorNodesProps {
+  colorItems: Array<{
+    id: string;
+    color: string;
+    isVisible: boolean;
+  }>;
+  samplePoints: SamplePoint[];
+  imgWidth: number;
+  imgHeight: number;
+  showColorNodes: boolean;
+  imgRef: React.RefObject<HTMLImageElement>;
+  updateColorFromPosition: (id: string, position: Position) => void;
+}
+
 function ColorNodes({ 
   colorItems, 
   samplePoints, 
@@ -8,7 +32,7 @@ function ColorNodes({
   showColorNodes,
   imgRef,
   updateColorFromPosition 
-}) {
+}: ColorNodesProps) {
   if (!showColorNodes || !samplePoints.length || !colorItems.length) return null;
 
   // Filter to only visible colors and their corresponding points
@@ -30,21 +54,22 @@ function ColorNodes({
 
   if (visiblePoints.length === 0) return null;
 
-  const handleNodeDragStart = (e, index) => {
+  const handleNodeDragStart = (e: React.MouseEvent<SVGCircleElement>, index: number) => {
     e.stopPropagation(); // Prevent event bubbling
-    e.target.setAttribute('data-dragging', 'true');
-    e.target.setAttribute('data-index', index);
+    const target = e.target as SVGCircleElement;
+    target.setAttribute('data-dragging', 'true');
+    target.setAttribute('data-index', index.toString());
     // Add visual feedback
-    e.target.setAttribute('r', '16');
-    e.target.setAttribute('stroke-width', '4');
+    target.setAttribute('r', '16');
+    target.setAttribute('stroke-width', '4');
   };
 
-  const handleNodeDrag = (e) => {
-    const draggingNode = document.querySelector('circle[data-dragging="true"]');
+  const handleNodeDrag = (e: React.MouseEvent<SVGSVGElement>) => {
+    const draggingNode = document.querySelector('circle[data-dragging="true"]') as SVGCircleElement | null;
     if (!draggingNode) return;
 
     // Get SVG coordinates
-    const svg = draggingNode.closest('svg');
+    const svg = draggingNode.closest('svg') as SVGSVGElement | null;
     if (!svg) return;
 
     const svgRect = svg.getBoundingClientRect();
@@ -54,14 +79,14 @@ function ColorNodes({
     const y = Math.max(0, Math.min(e.clientY - svgRect.top, imgHeight));
 
     // Update circle position
-    draggingNode.setAttribute('cx', x);
-    draggingNode.setAttribute('cy', y);
+    draggingNode.setAttribute('cx', x.toString());
+    draggingNode.setAttribute('cy', y.toString());
 
     // Update polyline if needed
-    const index = Number(draggingNode.getAttribute('data-index'));
-    const polyline = svg.querySelector('polyline');
+    const index = parseInt(draggingNode.getAttribute('data-index') || '0', 10);
+    const polyline = svg.querySelector('polyline') as SVGPolylineElement | null;
     if (polyline) {
-      const points = polyline.getAttribute('points').split(' ');
+      const points = polyline.getAttribute('points')?.split(' ') || [];
       points[index] = `${x},${y}`;
       polyline.setAttribute('points', points.join(' '));
     }
@@ -72,21 +97,21 @@ function ColorNodes({
     }
   };
 
-  const handleNodeDragEnd = (e) => {
-    const draggingNode = document.querySelector('circle[data-dragging="true"]');
+  const handleNodeDragEnd = (e: React.MouseEvent<SVGSVGElement>) => {
+    const draggingNode = document.querySelector('circle[data-dragging="true"]') as SVGCircleElement | null;
     if (!draggingNode) return;
 
     // Reset size
     draggingNode.setAttribute('r', '14');
     draggingNode.setAttribute('stroke-width', '3');
 
-    const index = Number(draggingNode.getAttribute('data-index'));
+    const index = parseInt(draggingNode.getAttribute('data-index') || '0', 10);
     const nodeId = visibleColors[index]?.id;
     if (!nodeId) return;
 
     // Get new position
-    const x = parseFloat(draggingNode.getAttribute('cx'));
-    const y = parseFloat(draggingNode.getAttribute('cy'));
+    const x = parseFloat(draggingNode.getAttribute('cx') || '0');
+    const y = parseFloat(draggingNode.getAttribute('cy') || '0');
 
     // Get color at this position if we have a valid image
     if (imgRef.current) {
@@ -141,4 +166,4 @@ function ColorNodes({
   );
 }
 
-export default ColorNodes; 
+export default ColorNodes;
