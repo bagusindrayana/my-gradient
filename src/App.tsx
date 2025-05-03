@@ -879,11 +879,10 @@ function App() {
     }
 
     // Quantize colors (simplified k-means approach)
-    function quantizeColors(pixels: any, numColors: number) {
+    async function quantizeColors(pixels: any, numColors: number, maxDimension = 500) {
         // Initialize clusters with random pixels
         const clusters: any[] = [];
-        const pixelCount = pixels.length / 4;
-
+        
         const naturalWidth = imgUploadCanvas.current!.width;
         const naturalHeight = imgUploadCanvas.current!.height;
         const displayWidth = imgRef.current!.width;
@@ -891,6 +890,49 @@ function App() {
 
         const scaleX = displayWidth / naturalWidth;
         const scaleY = displayHeight / naturalHeight;
+
+        // Calculate downsampling factor if image is larger than maxDimension
+        const downscaleFactor = Math.max(
+            naturalWidth / maxDimension,
+            naturalHeight / maxDimension,
+            1
+        );
+        
+        // Create downsampled pixel data if needed
+        let processedPixels = pixels;
+        let processedWidth = naturalWidth;
+        let processedHeight = naturalHeight;
+        
+        if (downscaleFactor > 1) {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = Math.floor(naturalWidth / downscaleFactor);
+            tempCanvas.height = Math.floor(naturalHeight / downscaleFactor);
+            const tempCtx = tempCanvas.getContext('2d')!;
+            
+            // Draw original image scaled down
+            const imageData = new ImageData(
+                new Uint8ClampedArray(pixels.buffer),
+                naturalWidth,
+                naturalHeight
+            );
+            try {
+                const bitmap = await createImageBitmap(imageData);
+                tempCtx.drawImage(bitmap, 0, 0, tempCanvas.width, tempCanvas.height);
+            } catch (error) {
+                console.error("Error creating image bitmap:", error);
+                return [];
+            }
+            
+            // Get downsampled pixel data
+            const downsampledData = tempCtx.getImageData(
+                0, 0, tempCanvas.width, tempCanvas.height
+            ).data;
+            processedPixels = downsampledData;
+            processedWidth = tempCanvas.width;
+            processedHeight = tempCanvas.height;
+        }
+        
+        const pixelCount = processedPixels.length / 4;
 
         for (let i = 0; i < numColors; i++) {
             const randomIndex = Math.floor(Math.random() * pixelCount) * 4;
@@ -919,19 +961,19 @@ function App() {
         }
 
         // Assign pixels to clusters
-        for (let i = 0; i < pixels.length; i += 4) {
-            const r = pixels[i];
-            const g = pixels[i + 1];
-            const b = pixels[i + 2];
-            const a = pixels[i + 3];
+        for (let i = 0; i < processedPixels.length; i += 4) {
+            const r = processedPixels[i];
+            const g = processedPixels[i + 1];
+            const b = processedPixels[i + 2];
+            const a = processedPixels[i + 3];
 
             // Skip transparent pixels
             if (a < 128) continue;
 
-            //get position color
+            // Get position color (scaled back to original dimensions)
             const pixelPosition = Math.floor(i / 4);
-            const pixelX = (pixelPosition % naturalWidth) * scaleX;
-            const pixelY = Math.floor(pixelPosition / naturalWidth) * scaleY;
+            const pixelX = (pixelPosition % processedWidth) * scaleX * downscaleFactor;
+            const pixelY = Math.floor(pixelPosition / processedWidth) * scaleY * downscaleFactor;
 
             let minDistance = Number.MAX_VALUE;
             let closestCluster = 0;
@@ -1091,26 +1133,32 @@ function App() {
     }
 
     useEffect(() => {
-        if (imgUploadCanvasContext.current != null && imgUploadCanvas.current != null) {
+        const processColors = async () => {
+            if (!imgRef.current || !imgUploadCanvas.current || !imgUploadCanvasContext.current) {
+                return;
+            }
 
             if (sortBy == "default") {
-                extractColorsFromImage(imgRef.current, colorCount)
+                extractColorsFromImage(imgRef.current, colorCount);
             } else {
-                const imageData = imgUploadCanvasContext.current.getImageData(0, 0, imgUploadCanvas.current?.width, imgUploadCanvas.current?.height);
+                const imageData = imgUploadCanvasContext.current.getImageData(
+                    0, 0, 
+                    imgUploadCanvas.current.width, 
+                    imgUploadCanvas.current.height
+                );
                 const pixels = imageData.data;
-                let colors = quantizeColors(pixels, colorCount);
-                colors = sortColors(colors, sortBy);
+                const colors = await quantizeColors(pixels, colorCount);
+                const sortedColors = sortColors(colors, sortBy);
 
-                setPalette(colors.map((c) => {
+                setPalette(sortedColors.map((c: any) => {
                     return `rgb(${c.r},${c.g},${c.b})`;
                 }));
-                setColorSamplePoints(colors.map((c) => {
+                setColorSamplePoints(sortedColors.map((c: any) => {
                     return { x: c.samplePoint.x, y: c.samplePoint.y };
                 }));
             }
-
-
-        }
+        };
+        processColors();
     }, [sortBy])
 
     return (

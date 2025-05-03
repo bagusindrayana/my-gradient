@@ -4,6 +4,8 @@ import ColorNodes from './ColorNodes';
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { UploadIcon } from 'lucide-react';
 
 interface Position {
   x: number;
@@ -88,13 +90,16 @@ function ImageUpload({
             </div>
 
             {/* Reset button that appears on hover */}
-            <button
+            <Button onClick={resetImage} variant={"outline"} className='absolute cursor-pointer top-0 right-0 border-2 border-black z-20' size={"sm"} title="Reset image">
+              <UploadIcon/>
+            </Button>
+            {/* <button
               onClick={resetImage}
               className="absolute cursor-pointer top-0 right-0 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center group-hover:opacity-100 transition-opacity z-20"
               title="Reset image"
             >
               ×
-            </button>
+            </button> */}
           </div>
         ) : (
           <div

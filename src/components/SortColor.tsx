@@ -37,7 +37,7 @@ function SortColor({
                             </Button>
                             <Button
                                 variant="outline"
-                                title='Random Darkness'
+                                title='Random Dark To Light'
                                 className={`aspect-square p-0 ${sortBy === 'darkness' ? 'bg-black text-white' : 'bg-gray-100'}`}
                                 onClick={() => setSortBy('darkness')}
                             >
@@ -45,7 +45,7 @@ function SortColor({
                             </Button>
                             <Button
                                 variant="outline"
-                                title='Random Lightness'
+                                title='Random Light To Dark'
                                 className={`aspect-square p-0 ${sortBy === 'lightness' ? 'bg-black text-white' : 'bg-gray-100'}`}
                                 onClick={() => setSortBy('lightness')}
                             >

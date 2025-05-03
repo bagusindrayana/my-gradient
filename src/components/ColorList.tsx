@@ -115,8 +115,8 @@ function ColorList({
               {colorItems.length > 0 ? (
                 <div className="grid grid-cols-3">
                   {colorItems.map(item => (
-                    <div className='w-full h-10 px-4 py-2' style={{ backgroundColor: item.color, opacity: !item.isVisible ? 0.3 : 1 }}>
-
+                    <div className='w-full h-14 px-4 py-2 relative overflow-hidden' style={{ backgroundColor: item.color, opacity: !item.isVisible ? 0.3 : 1 }}>
+                      <div className='absolute -top-2 -right-2 h-4 w-4 bg-black rotate-45 border border-white'></div>
                     </div>
                 ))}
                 </div>
