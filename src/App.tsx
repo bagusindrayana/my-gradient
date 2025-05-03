@@ -55,12 +55,12 @@ function App() {
     const [gradientDirection, setGradientDirection] = useState<string>('to bottom');
     const [colorCount, setColorCount] = useState<number>(3);
     const [colorStops, setColorStops] = useState<number[]>([]);
-  
+
     const [blurValue, setBlurValue] = useState<number>(0);
     const [saturationValue, setSaturationValue] = useState<number>(100);
     const [grainValue, setGrainValue] = useState<number>(0);
     const [colorSamplePoints, setColorSamplePoints] = useState<Point[]>([]);
-    
+
     const [cssCodeResult, setCssCodeResult] = useState<string>('');
     const [palette, setPalette] = useState<string[]>([]);
     const [downloadSize, setDownloadSize] = useState<DownloadSize>({
@@ -95,8 +95,8 @@ function App() {
             imgUploadCanvasContext.current = imgUploadCanvas.current.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
             // Draw the image to the canvas
             imgUploadCanvasContext.current.drawImage(imgRef.current, 0, 0, imgUploadCanvas.current.width, imgUploadCanvas.current.height);
-        
-            
+
+
 
             extractColorsFromImage(imgRef.current, colorCount);
         }
@@ -130,6 +130,13 @@ function App() {
         return `rgb(${r},${g},${b})`;
     }
 
+    const getMidpoint = (x1: number, y1: number, x2: number, y2: number) => {
+        const midX = (x1 + x2) / 2;
+        const midY = (y1 + y2) / 2;
+        return { x: midX, y: midY };
+    };
+
+
     // Function to extract colors from the entire image
     async function extractColorsFromImage(image: any, maxColors = 5) {
         if (!image) {
@@ -142,11 +149,10 @@ function App() {
         try {
             const canvas = imgUploadCanvas.current as HTMLCanvasElement;
             const ctx = imgUploadCanvasContext.current;
-            if(ctx == null){
+            if (ctx == null) {
                 return;
             }
 
-           
 
             // Determine how many colors to sample
             const actualMaxColors = Math.min(maxColors, canvas.height);
@@ -155,52 +161,34 @@ function App() {
             const palette = [];
             const samplePoints = [];
 
-            // Use the center of the image for the x-coordinate
-            const centerX = Math.floor(canvas.width / 2);
+            // //get last point from colorSamplePoint
+            // const lastPoint = colorSamplePoints[colorSamplePoints.length];
+            // const lastSecondPoint = colorSamplePoints[colorSamplePoints.length-1];
+            // const midPoint = getMidpoint(lastPoint.x,lastPoint.y,lastSecondPoint.x,lastSecondPoint.y);
+
+
 
             // Sample evenly spaced points from top to bottom
             for (let i = 0; i < actualMaxColors; i++) {
                 // Calculate y position for even distribution
                 const yPercent = i / (actualMaxColors - 1);
-                const y = Math.floor(yPercent * canvas.height);
 
-                // Sample a small region around the point
-                const sampleSize = 5;
-                const startX = Math.max(0, centerX - sampleSize);
-                const startY = Math.max(0, y - sampleSize);
-                const width = Math.min(sampleSize * 2, canvas.width - startX);
-                const height = Math.min(sampleSize * 2, canvas.height - startY);
+                const displayX = image.width / 2;
+                const displayY = (image.height * yPercent);
+                const color = pickColor({
+                    x: displayX,
+                    y: displayY
+                });
 
-                // Get image data from the sample area
-                const imageData = ctx.getImageData(startX, startY, width, height);
-                const data = imageData.data;
-
-                // Calculate average color
-                let r = 0, g = 0, b = 0, count = 0;
-                for (let j = 0; j < data.length; j += 4) {
-                    // Skip transparent pixels
-                    if (data[j + 3] < 128) continue;
-
-                    r += data[j];
-                    g += data[j + 1];
-                    b += data[j + 2];
-                    count++;
-                }
-
-                if (count > 0) {
-                    r = Math.round(r / count);
-                    g = Math.round(g / count);
-                    b = Math.round(b / count);
-
+                if (color != null) {
                     // Add to palette
-                    palette.push(`rgb(${r}, ${g}, ${b})`);
+                    palette.push(color);
 
-                    // Calculate display coordinates for the sample point
-                    const displayX = image.width / 2;
-                    const displayY = (image.height * yPercent);
 
                     samplePoints.push({ x: displayX, y: displayY });
                 }
+
+
             }
 
             console.log(`Extracted ${palette.length} colors:`, palette);
@@ -341,7 +329,7 @@ function App() {
             // Create a small canvas to sample the color
             const canvas = imgUploadCanvas.current;
             const ctx = imgUploadCanvasContext.current;
-            if(ctx == null){
+            if (ctx == null) {
                 return;
             }
 
@@ -853,49 +841,57 @@ function App() {
     };
 
     // Convert RGB to HSL
-    function rgbToHsl(r:number, g:number, b:number) {
+    function rgbToHsl(r: number, g: number, b: number) {
         r /= 255;
         g /= 255;
         b /= 255;
-        
+
         const max = Math.max(r, g, b);
         const min = Math.min(r, g, b);
         let h, s, l = (max + min) / 2;
-        
+
         if (max === min) {
             h = s = 0; // achromatic
         } else {
             const d = max - min;
             s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-            
+
             switch (max) {
                 case r: h = (g - b) / d + (g < b ? 6 : 0); break;
                 case g: h = (b - r) / d + 2; break;
                 case b: h = (r - g) / d + 4; break;
             }
-            
-            if(h != undefined){
+
+            if (h != undefined) {
                 h /= 6;
             }
         }
-        
-        return { h: (h??0) * 360, s: s * 100, l: l * 100 };
+
+        return { h: (h ?? 0) * 360, s: s * 100, l: l * 100 };
     }
-    
+
     // RGB to Hex conversion
-    function rgbToHex(r:number, g:number, b:number) {
+    function rgbToHex(r: number, g: number, b: number) {
         return '#' + [r, g, b].map(x => {
             const hex = x.toString(16);
             return hex.length === 1 ? '0' + hex : hex;
         }).join('');
     }
-    
+
     // Quantize colors (simplified k-means approach)
-    function quantizeColors(pixels:any, numColors:number) {
+    function quantizeColors(pixels: any, numColors: number) {
         // Initialize clusters with random pixels
-        const clusters = [];
+        const clusters: any[] = [];
         const pixelCount = pixels.length / 4;
-        
+
+        const naturalWidth = imgUploadCanvas.current!.width;
+        const naturalHeight = imgUploadCanvas.current!.height;
+        const displayWidth = imgRef.current!.width;
+        const displayHeight = imgRef.current!.height;
+
+        const scaleX = displayWidth / naturalWidth;
+        const scaleY = displayHeight / naturalHeight;
+
         for (let i = 0; i < numColors; i++) {
             const randomIndex = Math.floor(Math.random() * pixelCount) * 4;
             clusters.push({
@@ -909,75 +905,106 @@ function App() {
                 h: 0,
                 s: 0,
                 l: 0,
-                hex: ''
+                hex: '',
+                points: []
             });
         }
-        
-        // Iterate a few times for better convergence
-        for (let iteration = 0; iteration < 5; iteration++) {
-            // Reset counts and sums
-            for (let i = 0; i < clusters.length; i++) {
-                clusters[i].count = 0;
-                clusters[i].rSum = 0;
-                clusters[i].gSum = 0;
-                clusters[i].bSum = 0;
-            }
-            
-            // Assign pixels to clusters
-            for (let i = 0; i < pixels.length; i += 4) {
-                const r = pixels[i];
-                const g = pixels[i + 1];
-                const b = pixels[i + 2];
-                const a = pixels[i + 3];
-                
-                // Skip transparent pixels
-                if (a < 128) continue;
-                
-                let minDistance = Number.MAX_VALUE;
-                let closestCluster = 0;
-                
-                // Find closest cluster
-                for (let j = 0; j < clusters.length; j++) {
-                    const cluster = clusters[j];
-                    const dr = cluster.r - r;
-                    const dg = cluster.g - g;
-                    const db = cluster.b - b;
-                    const distance = dr * dr + dg * dg + db * db;
-                    
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        closestCluster = j;
-                    }
-                }
-                
-                // Add to closest cluster
-                clusters[closestCluster].count++;
-                clusters[closestCluster].rSum = (clusters[closestCluster].rSum || 0) + r;
-                clusters[closestCluster].gSum = (clusters[closestCluster].gSum || 0) + g;
-                clusters[closestCluster].bSum = (clusters[closestCluster].bSum || 0) + b;
-            }
-            
-            // Update cluster centers
-            for (let i = 0; i < clusters.length; i++) {
-                if (clusters[i].count > 0) {
-                    clusters[i].r = Math.round(clusters[i].rSum / clusters[i].count);
-                    clusters[i].g = Math.round(clusters[i].gSum / clusters[i].count);
-                    clusters[i].b = Math.round(clusters[i].bSum / clusters[i].count);
-                }
-            }
+
+        // Reset counts and sums
+        for (let i = 0; i < clusters.length; i++) {
+            clusters[i].count = 0;
+            clusters[i].rSum = 0;
+            clusters[i].gSum = 0;
+            clusters[i].bSum = 0;
         }
-        
+
+        // Assign pixels to clusters
+        for (let i = 0; i < pixels.length; i += 4) {
+            const r = pixels[i];
+            const g = pixels[i + 1];
+            const b = pixels[i + 2];
+            const a = pixels[i + 3];
+
+            // Skip transparent pixels
+            if (a < 128) continue;
+
+            //get position color
+            const pixelPosition = Math.floor(i / 4);
+            const pixelX = (pixelPosition % naturalWidth) * scaleX;
+            const pixelY = Math.floor(pixelPosition / naturalWidth) * scaleY;
+
+            let minDistance = Number.MAX_VALUE;
+            let closestCluster = 0;
+
+            // Find closest cluster
+            for (let j = 0; j < clusters.length; j++) {
+                const cluster = clusters[j];
+                const dr = cluster.r - r;
+                const dg = cluster.g - g;
+                const db = cluster.b - b;
+                const distance = dr * dr + dg * dg + db * db;
+
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestCluster = j;
+                }
+            }
+
+            // Add to closest cluster
+            clusters[closestCluster].count++;
+            clusters[closestCluster].rSum = (clusters[closestCluster].rSum || 0) + r;
+            clusters[closestCluster].gSum = (clusters[closestCluster].gSum || 0) + g;
+            clusters[closestCluster].bSum = (clusters[closestCluster].bSum || 0) + b;
+
+            // Store pixel position
+            clusters[closestCluster].points.push({ x: pixelX, y: pixelY });
+        }
+
+        // Update cluster centers
+        // for (let i = 0; i < clusters.length; i++) {
+        //     if (clusters[i].count > 0) {
+        //         clusters[i].r = Math.round(clusters[i].rSum / clusters[i].count);
+        //         clusters[i].g = Math.round(clusters[i].gSum / clusters[i].count);
+        //         clusters[i].b = Math.round(clusters[i].bSum / clusters[i].count);
+        //     }
+        // }
+
         // Filter out unused clusters and add HSL values
         const usedClusters = clusters.filter(cluster => cluster.count > 0);
-        
+
         usedClusters.forEach(cluster => {
             const hsl = rgbToHsl(cluster.r, cluster.g, cluster.b);
-            cluster.h = hsl.h;
-            cluster.s = hsl.s;
-            cluster.l = hsl.l;
-            cluster.hex = rgbToHex(cluster.r, cluster.g, cluster.b);
+           
+
+            if (cluster.points.length > 0) {
+                // Sort points by distance from cluster center
+                const centerX = cluster.points.reduce((sum: number, p: any) => sum + p.x, 0) / cluster.points.length;
+                const centerY = cluster.points.reduce((sum: number, p: any) => sum + p.y, 0) / cluster.points.length;
+
+                cluster.points.sort((a: any, b: any) => {
+                    const distA = Math.pow(a.x - centerX, 2) + Math.pow(a.y - centerY, 2);
+                    const distB = Math.pow(b.x - centerX, 2) + Math.pow(b.y - centerY, 2);
+                    return distA - distB;
+                });
+
+                // Use a point close to the center
+                const medianPoint = cluster.points[Math.floor(cluster.points.length / 3)];
+                const c = pickColor({x:medianPoint.x,y:medianPoint.y});
+                if(c){
+                    const rgb = c?.split(",")
+                    cluster.r = rgb![0].replaceAll("rgb(","");
+                    cluster.g = rgb![1];
+                    cluster.b = rgb![2].replaceAll(")","");
+                }
+                cluster.samplePoint = medianPoint;
+
+                cluster.h = hsl.h;
+                cluster.s = hsl.s;
+                cluster.l = hsl.l;
+                cluster.hex = rgbToHex(cluster.r, cluster.g, cluster.b);
+            }
         });
-        
+
         return usedClusters;
     }
 
@@ -1044,98 +1071,127 @@ function App() {
                 extractColorsFromImage(imgRef.current, colorCount);
             }
 
-            // If we need to add more colors
-            // if (colorCount > currentCount) {
-            //     if (imgUploadCanvas.current) {
-            //         extractColorsFromImage(imgRef.current, colorCount);
-            //     }
-            // } else {
-            //     //remove colors
-            //     setPalette(prev => prev.slice(0, colorCount));
-            //     setColorSamplePoints(prev => prev.slice(0, colorCount));
-            // }
         }
     }, [colorCount, imgRef.current]);
+
+
+    function sortColors(colors: any, sortMethod: string) {
+        switch (sortMethod) {
+            case 'lightness':
+                return colors.sort((a: any, b: any) => b.l - a.l);
+            case 'darkness':
+                return colors.sort((a: any, b: any) => a.l - b.l);
+            case 'hue':
+                return colors.sort((a: any, b: any) => a.h - b.h);
+            case 'saturation':
+                return colors.sort((a: any, b: any) => b.s - a.s);
+            default:
+                return colors;
+        }
+    }
+
+    useEffect(() => {
+        if (imgUploadCanvasContext.current != null && imgUploadCanvas.current != null) {
+
+            if (sortBy == "default") {
+                extractColorsFromImage(imgRef.current, colorCount)
+            } else {
+                const imageData = imgUploadCanvasContext.current.getImageData(0, 0, imgUploadCanvas.current?.width, imgUploadCanvas.current?.height);
+                const pixels = imageData.data;
+                let colors = quantizeColors(pixels, colorCount);
+                colors = sortColors(colors, sortBy);
+
+                setPalette(colors.map((c) => {
+                    return `rgb(${c.r},${c.g},${c.b})`;
+                }));
+                setColorSamplePoints(colors.map((c) => {
+                    return { x: c.samplePoint.x, y: c.samplePoint.y };
+                }));
+            }
+
+
+        }
+    }, [sortBy])
 
     return (
         <div className='h-auto md:h-screen w-full flex justify-center items-center'>
             <div className="p-2 bg-[#F6F6F7] max-w-7xl mx-auto">
-            <Card className="mb-2 te-card">
-                <CardContent className="p-4 text-center">
-                    <h1 className="text-xl font-mono font-bold uppercase tracking-wider">IM—{'>'}GRAD</h1>
-                </CardContent>
-            </Card>
-            <main className="grid grid-cols-1 md:grid-cols-5 gap-2">
-                <div className="col-span-1 md:col-span-2 flex flex-col gap-2">
-                    {/* Image Upload Section */}
-                    <ImageUpload
-                        imgSrc={imgSrc}
-                        setImgSrc={setImgSrc}
-                        imgRef={imgRef as React.RefObject<HTMLImageElement>}
-                        onImageLoad={onImageLoad}
-                        imgWidth={imgWidth}
-                        imgHeight={imgHeight}
-                        colorItems={colorItems}
-                        colorSamplePoints={colorSamplePoints}
-                        resetImage={resetImage}
-                        updateColorFromPosition={updateColorFromPosition}
-                    />
+                <Card className="mb-2 te-card">
+                    <CardContent className="p-4 text-center">
+                        <h1 className="text-xl font-mono font-bold uppercase tracking-wider">IM—{'>'}GRAD</h1>
+                    </CardContent>
+                </Card>
+                <main className="grid grid-cols-1 md:grid-cols-5 gap-2">
+                    <div className="col-span-1 md:col-span-2 flex flex-col gap-2">
+                        {/* Image Upload Section */}
+                        <ImageUpload
+                            imgSrc={imgSrc}
+                            setImgSrc={setImgSrc}
+                            imgRef={imgRef as React.RefObject<HTMLImageElement>}
+                            onImageLoad={onImageLoad}
+                            imgWidth={imgWidth}
+                            imgHeight={imgHeight}
+                            colorItems={colorItems}
+                            colorSamplePoints={colorSamplePoints}
+                            resetImage={resetImage}
+                            updateColorFromPosition={updateColorFromPosition}
+                        />
 
-                    {/* Gradient Settings Section */}
-                    <GradientSettings
-                        gradientDirection={gradientDirection}
-                        setGradientDirection={setGradientDirection}
-                        colorCount={colorCount}
-                        setColorCount={setColorCount}
-                    />
+                        {/* Gradient Settings Section */}
+                        <GradientSettings
+                            gradientDirection={gradientDirection}
+                            setGradientDirection={setGradientDirection}
+                            colorCount={colorCount}
+                            setColorCount={setColorCount}
+                        />
 
-                    {/* CSS Code Section */}
-                    {/* <CssCode cssCodeResult={cssCodeResult} /> */}
-                </div>
-                <div className='col-span-1 md:col-span-2 flex flex-col gap-2'>
-                    {/* Gradient Preview Section */}
-                    <GradientPreview
-                        colorItems={colorItems}
-                        colorStops={colorStops}
-                        setColorStops={setColorStops}
-                        gradientDirection={gradientDirection}
-                        imgHeight={imgHeight}
-                        isLoadingColors={isLoadingColors}
-                        renderGradientToCanvas={renderGradientToCanvas}
-                    />
+                        {/* CSS Code Section */}
+                        {/* <CssCode cssCodeResult={cssCodeResult} /> */}
+                    </div>
+                    <div className='col-span-1 md:col-span-2 flex flex-col gap-2'>
+                        {/* Gradient Preview Section */}
+                        <GradientPreview
+                            colorItems={colorItems}
+                            colorStops={colorStops}
+                            setColorStops={setColorStops}
+                            gradientDirection={gradientDirection}
+                            imgHeight={imgHeight}
+                            isLoadingColors={isLoadingColors}
+                            renderGradientToCanvas={renderGradientToCanvas}
+                        />
 
-                    {/* Effects Section */}
-                    <Effects
-                        blurValue={blurValue}
-                        setBlurValue={setBlurValue}
-                        saturationValue={saturationValue}
-                        setSaturationValue={setSaturationValue}
-                        grainValue={grainValue}
-                        setGrainValue={setGrainValue}
-                    />
-                </div>
-                <div className="col-span-1 flex flex-col gap-2">
-                    {/* Color List Section */}
-                    <ColorList
-                        colorItems={colorItems}
+                        {/* Effects Section */}
+                        <Effects
+                            blurValue={blurValue}
+                            setBlurValue={setBlurValue}
+                            saturationValue={saturationValue}
+                            setSaturationValue={setSaturationValue}
+                            grainValue={grainValue}
+                            setGrainValue={setGrainValue}
+                        />
+                    </div>
+                    <div className="col-span-1 flex flex-col gap-2">
+                        {/* Color List Section */}
+                        <ColorList
+                            colorItems={colorItems}
 
-                        isLoadingColors={isLoadingColors}
-                        toggleColorVisibility={toggleColorVisibility}
-                        onChange={handleColorListChange}
-                    />
+                            isLoadingColors={isLoadingColors}
+                            toggleColorVisibility={toggleColorVisibility}
+                            onChange={handleColorListChange}
+                        />
 
-                    <SortColor sortBy={sortBy} setSortBy={setSortBy}></SortColor>
+                        <SortColor sortBy={sortBy} setSortBy={setSortBy}></SortColor>
 
-                    {/* Download Section */}
-                    <Download
-                        downloadSize={downloadSize}
-                        setDownloadSize={setDownloadSize}
-                        downloadGradientAsImage={downloadGradientAsImage}
-                        colorItems={colorItems}
-                    />
-                </div>
-            </main>
-        </div>
+                        {/* Download Section */}
+                        <Download
+                            downloadSize={downloadSize}
+                            setDownloadSize={setDownloadSize}
+                            downloadGradientAsImage={downloadGradientAsImage}
+                            colorItems={colorItems}
+                        />
+                    </div>
+                </main>
+            </div>
         </div>
     );
 }
