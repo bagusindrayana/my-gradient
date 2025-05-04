@@ -13,14 +13,7 @@ import GradientSettings from './components/GradientSettings';
 import Download from './components/Download';
 
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Slider } from "@/components/ui/slider";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { ArrowDown, Square, Circle, Grid, DownloadIcon, Image as ImageIcon } from "lucide-react";
+
 
 import {
     arrayMove,
@@ -58,6 +51,7 @@ function App() {
 
     const [blurValue, setBlurValue] = useState<number>(0);
     const [saturationValue, setSaturationValue] = useState<number>(100);
+    const [contrastValue, setContrastValue] = useState<number>(100);
     const [grainValue, setGrainValue] = useState<number>(0);
     const [colorSamplePoints, setColorSamplePoints] = useState<Point[]>([]);
 
@@ -72,6 +66,10 @@ function App() {
     const noise2DRef = useRef<NoiseFunction2D | null>(null);
 
     const [sortBy, setSortBy] = useState<string>('default');
+    const [colors, setColors] = useState<any[]>([])
+
+    const [loadingDownload, setLoadingDownload] = useState<boolean>(false);
+    
 
     // Initialize SimplexNoise on component mount
     useEffect(() => {
@@ -247,8 +245,6 @@ function App() {
             color: color,
             isVisible: true, // Default to visible
         })));
-
-        console.log(palette);
 
         // Initialize color stops when palette changes (evenly distributed)
         if (palette.length > 0) {
@@ -463,10 +459,103 @@ function App() {
         ctx.putImageData(imageData, 0, 0);
     };
 
+    function applyContrast(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, contrast: number) {
+        const imageData = ctx!.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+
+        // Contrast adjustment factor
+        const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+
+        for (let i = 0; i < data.length; i += 4) {
+            // Red
+            data[i] = factor * (data[i] - 128) + 128;
+            // Green
+            data[i + 1] = factor * (data[i + 1] - 128) + 128;
+            // Blue
+            data[i + 2] = factor * (data[i + 2] - 128) + 128;
+
+            // Clamp values between 0-255
+            data[i] = Math.max(0, Math.min(255, data[i]));
+            data[i + 1] = Math.max(0, Math.min(255, data[i + 1]));
+            data[i + 2] = Math.max(0, Math.min(255, data[i + 2]));
+        }
+
+        ctx!.putImageData(imageData, 0, 0);
+    }
+
+    const applySaturation = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, intensity: number) => {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+
+                for (let i = 0; i < data.length; i += 4) {
+                    // Convert RGB to HSL
+                    const r = data[i] / 255;
+                    const g = data[i + 1] / 255;
+                    const b = data[i + 2] / 255;
+
+                    const max = Math.max(r, g, b);
+                    const min = Math.min(r, g, b);
+                    let h, s, l = (max + min) / 2;
+
+                    if (max === min) {
+                        h = s = 0; // achromatic
+                    } else {
+                        const d = max - min;
+                        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+
+                        switch (max) {
+                            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                            case g: h = (b - r) / d + 2; break;
+                            case b: h = (r - g) / d + 4; break;
+                        }
+
+                        if (h != undefined) {
+                            h /= 6;
+                        }
+                    }
+
+                    // Adjust saturation
+                    s = s * (intensity / 100);
+                    s = Math.max(0, Math.min(1, s)); // Clamp between 0 and 1
+
+                    // Convert back to RGB
+                    function hue2rgb(p: number, q: number, t: number) {
+                        if (t < 0) t += 1;
+                        if (t > 1) t -= 1;
+                        if (t < 1 / 6) return p + (q - p) * 6 * t;
+                        if (t < 1 / 2) return q;
+                        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+                        return p;
+                    }
+
+                    let r1, g1, b1;
+
+                    if (h != undefined) {
+                        if (s === 0) {
+                            r1 = g1 = b1 = l; // achromatic
+                        } else {
+                            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                            const p = 2 * l - q;
+
+                            r1 = hue2rgb(p, q, h + 1 / 3);
+                            g1 = hue2rgb(p, q, h);
+                            b1 = hue2rgb(p, q, h - 1 / 3);
+                        }
+
+                        // Set values back
+                        data[i] = Math.round(r1 * 255);
+                        data[i + 1] = Math.round(g1 * 255);
+                        data[i + 2] = Math.round(b1 * 255);
+                    }
+                }
+
+                ctx.putImageData(imageData, 0, 0);
+    };
+
     // Function to render gradient and effects to a canvas
     const renderGradientToCanvas = useCallback((targetCanvas: HTMLCanvasElement, width: number, height: number) => {
         if (!targetCanvas) return;
-
+        previewCanvasRef.current = targetCanvas;
         const ctx = targetCanvas.getContext('2d') as CanvasRenderingContext2D;
 
         // Set canvas dimensions if needed
@@ -537,81 +626,20 @@ function App() {
         }
 
         // Apply filters
-        if (blurValue > 0 || saturationValue !== 100 || grainValue > 0) {
+        if (blurValue > 0 || saturationValue !== 100 || contrastValue !== 100 || grainValue > 0) {
 
             // Apply saturation
             if (saturationValue !== 100) {
-                const imageData = ctx.getImageData(0, 0, width, height);
-                const data = imageData.data;
+                applySaturation(ctx, targetCanvas, saturationValue)
+            }
 
-                for (let i = 0; i < data.length; i += 4) {
-                    // Convert RGB to HSL
-                    const r = data[i] / 255;
-                    const g = data[i + 1] / 255;
-                    const b = data[i + 2] / 255;
-
-                    const max = Math.max(r, g, b);
-                    const min = Math.min(r, g, b);
-                    let h, s, l = (max + min) / 2;
-
-                    if (max === min) {
-                        h = s = 0; // achromatic
-                    } else {
-                        const d = max - min;
-                        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-
-                        switch (max) {
-                            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                            case g: h = (b - r) / d + 2; break;
-                            case b: h = (r - g) / d + 4; break;
-                        }
-
-                        if (h != undefined) {
-                            h /= 6;
-                        }
-                    }
-
-                    // Adjust saturation
-                    s = s * (saturationValue / 100);
-                    s = Math.max(0, Math.min(1, s)); // Clamp between 0 and 1
-
-                    // Convert back to RGB
-                    function hue2rgb(p: number, q: number, t: number) {
-                        if (t < 0) t += 1;
-                        if (t > 1) t -= 1;
-                        if (t < 1 / 6) return p + (q - p) * 6 * t;
-                        if (t < 1 / 2) return q;
-                        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-                        return p;
-                    }
-
-                    let r1, g1, b1;
-
-                    if (h != undefined) {
-                        if (s === 0) {
-                            r1 = g1 = b1 = l; // achromatic
-                        } else {
-                            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-                            const p = 2 * l - q;
-
-                            r1 = hue2rgb(p, q, h + 1 / 3);
-                            g1 = hue2rgb(p, q, h);
-                            b1 = hue2rgb(p, q, h - 1 / 3);
-                        }
-
-                        // Set values back
-                        data[i] = Math.round(r1 * 255);
-                        data[i + 1] = Math.round(g1 * 255);
-                        data[i + 2] = Math.round(b1 * 255);
-                    }
-                }
-
-                ctx.putImageData(imageData, 0, 0);
+            if (contrastValue !== 100) {
+                applyContrast(ctx, targetCanvas, contrastValue-100);
             }
 
             // Apply grain
             if (grainValue > 0 && noise2DRef.current) {
-                applyGrainEffect(ctx, targetCanvas, grainValue / 1000);
+                applyGrainEffect(ctx, targetCanvas, grainValue / targetCanvas.width);
             }
 
             // Apply blur
@@ -633,7 +661,7 @@ function App() {
             }
 
         }
-    }, [colorItems, colorStops, gradientDirection, blurValue, saturationValue, grainValue, noise2DRef]);
+    }, [colorItems, colorStops, gradientDirection, blurValue, saturationValue, grainValue, noise2DRef, contrastValue]);
 
     // Function to download gradient as image
     const downloadGradientAsImage = () => {
@@ -641,6 +669,8 @@ function App() {
             alert('Please generate a gradient first');
             return;
         }
+
+        setLoadingDownload(true);
 
         // Create a canvas with the desired download size
         const canvas = document.createElement('canvas');
@@ -706,72 +736,12 @@ function App() {
 
             // Apply saturation
             if (saturationValue !== 100) {
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const data = imageData.data;
-
-                for (let i = 0; i < data.length; i += 4) {
-                    // Convert RGB to HSL
-                    const r = data[i] / 255;
-                    const g = data[i + 1] / 255;
-                    const b = data[i + 2] / 255;
-
-                    const max = Math.max(r, g, b);
-                    const min = Math.min(r, g, b);
-                    let h, s, l = (max + min) / 2;
-
-                    if (h != undefined) {
-                        if (max === min) {
-                            h = s = 0; // achromatic
-                        } else {
-                            const d = max - min;
-                            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-
-                            switch (max) {
-                                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                                case g: h = (b - r) / d + 2; break;
-                                case b: h = (r - g) / d + 4; break;
-                            }
-
-                            h /= 6;
-                        }
-
-                        // Adjust saturation
-                        s = s * (saturationValue / 100);
-                        s = Math.max(0, Math.min(1, s)); // Clamp between 0 and 1
-
-                        // Convert back to RGB
-                        function hue2rgb(p: number, q: number, t: number) {
-                            if (t < 0) t += 1;
-                            if (t > 1) t -= 1;
-                            if (t < 1 / 6) return p + (q - p) * 6 * t;
-                            if (t < 1 / 2) return q;
-                            if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-                            return p;
-                        }
-
-                        let r1, g1, b1;
-
-                        if (s === 0) {
-                            r1 = g1 = b1 = l; // achromatic
-                        } else {
-                            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-                            const p = 2 * l - q;
-
-                            r1 = hue2rgb(p, q, h + 1 / 3);
-                            g1 = hue2rgb(p, q, h);
-                            b1 = hue2rgb(p, q, h - 1 / 3);
-                        }
-
-                        // Set the values back
-                        data[i] = Math.round(r1 * 255);
-                        data[i + 1] = Math.round(g1 * 255);
-                        data[i + 2] = Math.round(b1 * 255);
-                    }
-                }
-
-                ctx.putImageData(imageData, 0, 0);
+                applySaturation(ctx, canvas, saturationValue)
             }
 
+            if (contrastValue !== 100) {
+                applyContrast(ctx, canvas, contrastValue-100);
+            }
             // Apply grain effect if needed
             if (grainValue > 0 && noise2DRef.current) {
                 // Get the original content
@@ -788,7 +758,7 @@ function App() {
                 ctx.drawImage(tempCanvas, 0, 0);
 
                 // Apply the grain effect using SimplexNoise
-                applyGrainEffect(ctx, canvas, grainValue / 1000);
+                applyGrainEffect(ctx, canvas, grainValue / (canvas.width/Math.round(canvas.width/previewCanvasRef.current!.width)));
             }
 
             // Apply blur if specified
@@ -838,6 +808,8 @@ function App() {
         link.download = `gradient-${new Date().getTime()}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
+
+        setLoadingDownload(false);
     };
 
     // Convert RGB to HSL
@@ -878,11 +850,32 @@ function App() {
         }).join('');
     }
 
+    // Convert RGB to HSL
+    function hslToRgb(h: number, s: number, l: number) {
+        let c = (1 - Math.abs(2 * l - 1)) * s;
+        let x = c * (1 - Math.abs((h / 60) % 2 - 1));
+        let m = l - c / 2;
+        let [r, g, b] = [0, 0, 0];
+
+        if (0 <= h && h < 60) [r, g, b] = [c, x, 0];
+        else if (60 <= h && h < 120) [r, g, b] = [x, c, 0];
+        else if (120 <= h && h < 180) [r, g, b] = [0, c, x];
+        else if (180 <= h && h < 240) [r, g, b] = [0, x, c];
+        else if (240 <= h && h < 300) [r, g, b] = [x, 0, c];
+        else if (300 <= h && h < 360) [r, g, b] = [c, 0, x];
+
+        return {
+            r: Math.round((r + m) * 255),
+            g: Math.round((g + m) * 255),
+            b: Math.round((b + m) * 255)
+        };
+    }
+
     // Quantize colors (simplified k-means approach)
-    async function quantizeColors(pixels: any, numColors: number, maxDimension = 500) {
+    async function quantizeColors(pixels: any, numColors: number, maxDimension = 600) {
         // Initialize clusters with random pixels
         const clusters: any[] = [];
-        
+
         const naturalWidth = imgUploadCanvas.current!.width;
         const naturalHeight = imgUploadCanvas.current!.height;
         const displayWidth = imgRef.current!.width;
@@ -897,18 +890,18 @@ function App() {
             naturalHeight / maxDimension,
             1
         );
-        
+
         // Create downsampled pixel data if needed
         let processedPixels = pixels;
         let processedWidth = naturalWidth;
         let processedHeight = naturalHeight;
-        
+
         if (downscaleFactor > 1) {
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = Math.floor(naturalWidth / downscaleFactor);
             tempCanvas.height = Math.floor(naturalHeight / downscaleFactor);
             const tempCtx = tempCanvas.getContext('2d')!;
-            
+
             // Draw original image scaled down
             const imageData = new ImageData(
                 new Uint8ClampedArray(pixels.buffer),
@@ -922,7 +915,7 @@ function App() {
                 console.error("Error creating image bitmap:", error);
                 return [];
             }
-            
+
             // Get downsampled pixel data
             const downsampledData = tempCtx.getImageData(
                 0, 0, tempCanvas.width, tempCanvas.height
@@ -931,7 +924,7 @@ function App() {
             processedWidth = tempCanvas.width;
             processedHeight = tempCanvas.height;
         }
-        
+
         const pixelCount = processedPixels.length / 4;
 
         for (let i = 0; i < numColors; i++) {
@@ -1016,7 +1009,7 @@ function App() {
 
         usedClusters.forEach(cluster => {
             const hsl = rgbToHsl(cluster.r, cluster.g, cluster.b);
-           
+
 
             if (cluster.points.length > 0) {
                 // Sort points by distance from cluster center
@@ -1031,12 +1024,12 @@ function App() {
 
                 // Use a point close to the center
                 const medianPoint = cluster.points[Math.floor(cluster.points.length / 3)];
-                const c = pickColor({x:medianPoint.x,y:medianPoint.y});
-                if(c){
+                const c = pickColor({ x: medianPoint.x, y: medianPoint.y });
+                if (c) {
                     const rgb = c?.split(",")
-                    cluster.r = rgb![0].replaceAll("rgb(","");
+                    cluster.r = rgb![0].replaceAll("rgb(", "");
                     cluster.g = rgb![1];
-                    cluster.b = rgb![2].replaceAll(")","");
+                    cluster.b = rgb![2].replaceAll(")", "");
                 }
                 cluster.samplePoint = medianPoint;
 
@@ -1063,6 +1056,9 @@ function App() {
         setCssCodeResult('');
         setColorCount(3);
         setGrainValue(0);
+        setSortBy("default");
+        setColors([]);
+
     };
 
     const handleColorListChange = (oldIndex: number, newIndex: number) => {
@@ -1103,63 +1099,158 @@ function App() {
         setColorStops(colorStops);
     };
 
-    // Separate effect to handle colorCount changes
-    useEffect(() => {
-        // Only run this effect if we already have colors and image is loaded
-        if (palette.length > 0 && colorItems.length > 0 && imgRef.current) {
-            const currentCount = colorItems.length;
 
-            if (imgUploadCanvas.current) {
-                extractColorsFromImage(imgRef.current, colorCount);
+
+    const colorDistance = (c1: any, c2: any) =>
+        Math.sqrt(
+            Math.pow(c1.r - c2.r, 2) +
+            Math.pow(c1.g - c2.g, 2) +
+            Math.pow(c1.b - c2.b, 2)
+        );
+
+    const groupSimilarColors = (colors: any, threshold = 40) => {
+        const groups: any[] = [];
+        colors.forEach((color: any) => {
+            const match = groups.find(g => colorDistance(g.rep, color) < threshold);
+            if (match) {
+                match.colors.push(color);
+            } else {
+                groups.push({ rep: color, colors: [color] });
             }
-
-        }
-    }, [colorCount, imgRef.current]);
-
+        });
+        return groups;
+    };
 
     function sortColors(colors: any, sortMethod: string) {
         switch (sortMethod) {
             case 'lightness':
-                return colors.sort((a: any, b: any) => b.l - a.l);
+                var sorted = [...colors].sort((a, b) => b.l - a.l); // lightest to darkest
+                var result = [];
+                var step = (sorted.length - 1) / (colorCount - 1);
+
+                for (let i = 0; i < colorCount; i++) {
+                    const index = Math.round(i * step);
+                    result.push(sorted[index]);
+                }
+
+                return result;
             case 'darkness':
-                return colors.sort((a: any, b: any) => a.l - b.l);
+                var sorted = [...colors].sort((a, b) => a.l - b.l); // lightest to darkest
+                var result = [];
+                var step = (sorted.length - 1) / (colorCount - 1);
+
+                for (let i = 0; i < colorCount; i++) {
+                    const index = Math.round(i * step);
+                    result.push(sorted[index]);
+                }
+
+                return result;
             case 'hue':
                 return colors.sort((a: any, b: any) => a.h - b.h);
             case 'saturation':
                 return colors.sort((a: any, b: any) => b.s - a.s);
+            case 'dominant':
+                const groups = groupSimilarColors(colors);
+                groups.sort((a, b) => b.colors.length - a.colors.length);
+                return groups.map((d) => {
+                    return d.colors[0]
+                });
+            case 'soft':
+                // Return colors with saturation < 50%
+                return colors.filter((c: any) => c.s < 50);
+            case 'pastel':
+                console.log("pastel");
+                return colors.filter((c: any) => c.l >= 0.7 && c.s <= 0.6)
+                    .sort((a: any, b: any) => b.l - a.l);
             default:
                 return colors;
         }
     }
 
-    useEffect(() => {
-        const processColors = async () => {
-            if (!imgRef.current || !imgUploadCanvas.current || !imgUploadCanvasContext.current) {
-                return;
+    const processColors = async () => {
+        if (!imgRef.current || !imgUploadCanvas.current || !imgUploadCanvasContext.current) {
+            return;
+        }
+
+        if (sortBy == "default") {
+            extractColorsFromImage(imgRef.current, colorCount);
+        } else {
+            const imageData = imgUploadCanvasContext.current.getImageData(
+                0, 0,
+                imgUploadCanvas.current.width,
+                imgUploadCanvas.current.height
+            );
+            const pixels = imageData.data;
+            if (colors.length <= 0) {
+                const resultColors = await quantizeColors(pixels, imgUploadCanvas.current.width / 10);
+                setColors(resultColors);
+                const sortedColors = sortColors(resultColors, sortBy);
+
+
+                if (sortedColors.length > 0) {
+                    setPalette(sortedColors.map((c: any) => {
+                        return `rgb(${c.r},${c.g},${c.b})`;
+                    }).slice(0, colorCount));
+                    setColorSamplePoints(sortedColors.map((c: any) => {
+                        return { x: c.samplePoint.x, y: c.samplePoint.y };
+                    }).slice(0, colorCount));
+                }
+            } else {
+                const resultColors = colors;
+                const sortedColors = sortColors(resultColors, sortBy);
+
+
+                if (sortedColors.length > 0) {
+                    setPalette(sortedColors.map((c: any) => {
+                        return `rgb(${c.r},${c.g},${c.b})`;
+                    }).slice(0, colorCount));
+                    setColorSamplePoints(sortedColors.map((c: any) => {
+                        return { x: c.samplePoint.x, y: c.samplePoint.y };
+                    }).slice(0, colorCount));
+                }
             }
 
-            if (sortBy == "default") {
-                extractColorsFromImage(imgRef.current, colorCount);
-            } else {
-                const imageData = imgUploadCanvasContext.current.getImageData(
-                    0, 0, 
-                    imgUploadCanvas.current.width, 
-                    imgUploadCanvas.current.height
-                );
-                const pixels = imageData.data;
-                const colors = await quantizeColors(pixels, colorCount);
-                const sortedColors = sortColors(colors, sortBy);
 
+        }
+    };
+
+
+    // Separate effect to handle colorCount changes
+    useEffect(() => {
+        processColors();
+    }, [colorCount, imgRef.current, sortBy]);
+
+    async function generateAgain() {
+        if (!imgRef.current || !imgUploadCanvas.current || !imgUploadCanvasContext.current) {
+            return;
+        }
+        if (sortBy == "default") {
+            extractColorsFromImage(imgRef.current, colorCount);
+        } else {
+            const imageData = imgUploadCanvasContext.current.getImageData(
+                0, 0,
+                imgUploadCanvas.current.width,
+                imgUploadCanvas.current.height
+            );
+            const pixels = imageData.data;
+            const resultColors = await quantizeColors(pixels, imgUploadCanvas.current.width / 10);
+            setColors(resultColors);
+            const sortedColors = sortColors(resultColors, sortBy);
+
+
+            if (sortedColors.length > 0) {
                 setPalette(sortedColors.map((c: any) => {
                     return `rgb(${c.r},${c.g},${c.b})`;
-                }));
+                }).slice(0, colorCount));
                 setColorSamplePoints(sortedColors.map((c: any) => {
                     return { x: c.samplePoint.x, y: c.samplePoint.y };
-                }));
+                }).slice(0, colorCount));
             }
-        };
-        processColors();
-    }, [sortBy])
+
+
+        }
+    }
+
 
     return (
         <div className='h-auto md:h-screen w-full flex justify-center items-center'>
@@ -1185,13 +1276,12 @@ function App() {
                             updateColorFromPosition={updateColorFromPosition}
                         />
 
-                        {/* Gradient Settings Section */}
-                        <GradientSettings
-                            gradientDirection={gradientDirection}
-                            setGradientDirection={setGradientDirection}
-                            colorCount={colorCount}
-                            setColorCount={setColorCount}
-                        />
+
+
+
+
+                        <SortColor sortBy={sortBy} setSortBy={setSortBy} colorCount={colorCount}
+                            setColorCount={setColorCount} generateAgain={generateAgain}></SortColor>
 
                         {/* CSS Code Section */}
                         {/* <CssCode cssCodeResult={cssCodeResult} /> */}
@@ -1214,6 +1304,8 @@ function App() {
                             setBlurValue={setBlurValue}
                             saturationValue={saturationValue}
                             setSaturationValue={setSaturationValue}
+                            contrastValue={contrastValue}
+                            setContrastValue={setContrastValue}
                             grainValue={grainValue}
                             setGrainValue={setGrainValue}
                         />
@@ -1228,13 +1320,19 @@ function App() {
                             onChange={handleColorListChange}
                         />
 
-                        <SortColor sortBy={sortBy} setSortBy={setSortBy}></SortColor>
+                        {/* Gradient Settings Section */}
+                        <GradientSettings
+                            gradientDirection={gradientDirection}
+                            setGradientDirection={setGradientDirection}
+
+                        />
 
                         {/* Download Section */}
                         <Download
                             downloadSize={downloadSize}
                             setDownloadSize={setDownloadSize}
                             downloadGradientAsImage={downloadGradientAsImage}
+                            loadingDownload={loadingDownload}
                             colorItems={colorItems}
                         />
                     </div>

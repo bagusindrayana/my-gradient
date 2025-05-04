@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { UploadIcon } from 'lucide-react';
+import { XIcon } from 'lucide-react';
 
 interface Position {
   x: number;
@@ -68,7 +68,7 @@ function ImageUpload({
         <h2 className="te-heading mb-2">Input Image</h2>
 
         {imgSrc ? (
-          <div className="text-center min-h-[250px] flex flex-col items-center justify-center gap-2 relative">
+          <div className="text-center min-h-[250px] flex flex-col items-center justify-center gap-2 relative  transition-all duration-300">
             
             <div className="relative">
               <img
@@ -76,7 +76,7 @@ function ImageUpload({
                 alt="Upload preview"
                 src={imgSrc}
                 onLoad={onImageLoad}
-                className="max-h-[400px] mx-auto rounded-lg shadow-soft" // Limit display height
+                className="max-h-[400px] mx-auto rounded-lg shadow-soft  transition-all duration-300" // Limit display height
               />
               <ColorNodes
                 colorItems={colorItems}
@@ -90,8 +90,8 @@ function ImageUpload({
             </div>
 
             {/* Reset button that appears on hover */}
-            <Button onClick={resetImage} variant={"outline"} className='absolute cursor-pointer top-0 right-0 border-2 border-black z-20' size={"sm"} title="Reset image">
-              <UploadIcon/>
+            <Button onClick={resetImage} variant={"outline"} className='absolute cursor-pointer top-0 right-0 rounded-none border-black z-20' size={"sm"} title="Reset image">
+              <XIcon/>
             </Button>
             {/* <button
               onClick={resetImage}

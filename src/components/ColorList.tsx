@@ -70,16 +70,31 @@ function ColorList({
     onChange(oldIndex, newIndex);
   }
 
+  function copyColor(e:any,color: string) {
+    navigator.clipboard.writeText(color)
+      .then(() => {
+        const copied = e.target.querySelector(".copied");
+
+        copied.classList.remove('hidden')
+        setTimeout(() => {
+          copied.classList.add('hidden')
+        }, 1000);
+      })
+      .catch(err => {
+        console.error('Could not copy text: ', err);
+      });
+  }
+
   return (
-    <Card className="te-card p-1">
-      <CardContent className="p-1 gap-1">
-        <Tabs defaultValue="effects">
-          <TabsList className="w-full grid grid-cols-2 bg-gray-100 rounded-none">
+    <Card className="te-card p-1 grow flex items-stretch w-full">
+      <CardContent className="p-1 gap-1 grow flex items-stretch justify-stretch w-full ">
+        <Tabs defaultValue="effects" className=' w-full'>
+          <TabsList className="grid grid-cols-2 bg-gray-100 rounded-none w-full">
             <TabsTrigger value="effects" className="te-label data-[state=active]:bg-black data-[state=active]:text-white rounded-none">COLOR LIST {isLoadingColors && '(Loading...)'}</TabsTrigger>
             <TabsTrigger value="download" className="te-label data-[state=active]:bg-black data-[state=active]:text-white rounded-none">COLOR PALETTE {isLoadingColors && '(Loading...)'}</TabsTrigger>
           </TabsList>
-          <TabsContent value="effects" className="space-y-2">
-            <div className="bg-gray-100 border border-gray-200 p-0 min-h-[200px]">
+          <TabsContent value="effects" className="space-y-2 grow flex items-stretch justify-stretch w-full">
+            <div className="bg-gray-100 border border-gray-200 p-0 min-h-[200px] grow flex items-stretch justify-stretch overflow-y-auto w-full">
               {colorItems.length > 0 ? (
                 <DndContext
                   sensors={sensors}
@@ -90,7 +105,7 @@ function ColorList({
                     items={colorItems} // Pass items with unique IDs
                     strategy={verticalListSortingStrategy}
                   >
-                    <div className="divide-y divide-gray-200">
+                    <div className="divide-y divide-gray-200 w-full">
                       {colorItems.map(item => (
                         <SortableColorItem
                           key={item.id}
@@ -104,21 +119,24 @@ function ColorList({
                   </SortableContext>
                 </DndContext>
               ) : (
-                <div className="min-h-[200px] flex items-center justify-center text-gray-600 text-center text-sm">
+                <div className="min-h-[200px] w-full flex items-center justify-center text-gray-600 text-center text-sm">
                   {isLoadingColors ? 'Loading...' : 'No colors extracted yet.'}
                 </div>
               )}
             </div>
           </TabsContent>
-          <TabsContent value="download">
-            <div className="bg-gray-100 border border-gray-200 p-0 min-h-[200px]">
+          <TabsContent value="download" className='grow flex items-stretch justify-stretch  w-full'>
+            <div className="bg-gray-100 border border-gray-200 p-0 min-h-[200px] w-full">
               {colorItems.length > 0 ? (
                 <div className="grid grid-cols-3">
                   {colorItems.map(item => (
-                    <div className='w-full h-14 px-4 py-2 relative overflow-hidden' style={{ backgroundColor: item.color, opacity: !item.isVisible ? 0.3 : 1 }}>
+                    <div key={item.id} className='w-full h-14 px-4 py-2 relative overflow-hidden cursor-copy' onClick={(e)=>{
+                      copyColor(e,item.color);
+                    }} style={{ backgroundColor: item.color, opacity: !item.isVisible ? 0.3 : 1 }}>
                       <div className='absolute -top-2 -right-2 h-4 w-4 bg-black rotate-45 border border-white'></div>
+                      <div className='copied absolute bottom-0 left-0 right-0 hidden p-2 text-xs text-center'>Copied!</div>
                     </div>
-                ))}
+                  ))}
                 </div>
               ) : (
                 <div className="min-h-[200px] flex items-center justify-center text-gray-600 text-center text-sm">
@@ -170,32 +188,7 @@ function SortableColorItem({ id, color, isVisible, toggleVisibility }: SortableC
       />
 
     </div>
-    // <li
-    //   ref={setNodeRef}
-    //   style={style}
-    //   className={`color-item ${isDragging ? 'dragging' : ''} ${!isVisible ? 'opacity-50' : ''}`}
-    //   {...attributes} // Spread attributes for a11y etc.
-    // >
-    //   <span
-    //     className="drag-handle px-1"
-    //     {...listeners} // Spread listeners onto the handle
-    //     title="Drag to reorder"
-    //   >
-    //     ☰
-    //   </span>
-    //   <span
-    //     className="color-swatch ml-2"
-    //     style={{ backgroundColor: color, opacity: !isVisible ? 0.3 : 1 }}
-    //   ></span>
-    //   <span className="flex-grow ml-2 font-mono text-sm">{color}</span>
-    //   <input
-    //     type="checkbox"
-    //     checked={isVisible}
-    //     onChange={() => toggleVisibility(id)}
-    //     title="Show/Hide Color"
-    //     className="custom-checkbox ml-auto"
-    //   />
-    // </li>
+
   );
 }
 

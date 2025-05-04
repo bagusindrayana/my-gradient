@@ -124,7 +124,7 @@ function ColorNodes({
 
   return (
     <svg
-      className="absolute top-0 left-0 transition-all"
+      className="absolute top-0 left-0 transition-all duration-300"
       width={imgWidth}
       height={imgHeight}
       style={{ zIndex: 10, pointerEvents: 'auto' }}

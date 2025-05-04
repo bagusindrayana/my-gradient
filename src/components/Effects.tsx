@@ -8,6 +8,8 @@ interface EffectsProps {
   setBlurValue: (value: number) => void;
   saturationValue: number;
   setSaturationValue: (value: number) => void;
+  contrastValue: number;
+  setContrastValue: (value: number) => void;
   grainValue: number;
   setGrainValue: (value: number) => void;
 }
@@ -17,6 +19,8 @@ function Effects({
   setBlurValue,
   saturationValue,
   setSaturationValue,
+  contrastValue,
+  setContrastValue,
   grainValue,
   setGrainValue
 }: EffectsProps) {
@@ -24,7 +28,7 @@ function Effects({
     <Card className="te-card p-1">
       <CardContent className="p-1 gap-1">
         <h2 className="te-heading">Effects</h2>
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
             <Label htmlFor="showGradientStops" className="te-label">Blur : {blurValue}%</Label>
             <Slider
@@ -50,6 +54,18 @@ function Effects({
           </div>
 
           <div className="flex flex-col gap-2">
+            <Label htmlFor="showGradientStops" className="te-label">Contrast : {contrastValue}%</Label>
+            <Slider
+              value={[contrastValue]}
+              min={0}
+              max={200}
+              step={1}
+              onValueChange={(val) => setContrastValue(val[0])}
+              className="te-slider-track"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
             <Label htmlFor="showGradientStops" className="te-label">Grain : {grainValue}%</Label>
             <Slider
               value={[grainValue]}
@@ -60,6 +76,8 @@ function Effects({
               className="te-slider-track"
             />
           </div>
+
+
         </div>
       </CardContent>
 
