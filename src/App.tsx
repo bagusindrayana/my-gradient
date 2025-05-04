@@ -264,6 +264,10 @@ function App() {
         if (saturationValue !== 100) { // Only apply if not default
             filters.push(`saturate(${saturationValue}%)`);
         }
+
+        if(contrastValue !== 100){
+            filters.push(`contrast(${(contrastValue)}%)`);
+        }
         // Add grain filter if implemented later
         return filters.join(' ');
     };
@@ -277,11 +281,11 @@ function App() {
         const opacity = grainValue / 100;
 
         // Calculate appropriate noise frequency based on preview size
-        const previewWidth = imgWidth || 600;
+        const previewWidth = previewCanvasRef.current!.width || 600;
         const baseFrequency = Math.max(0.05, Math.min(1.0, 0.65 * (600 / previewWidth)));
 
         return `
-      url("data:image/svg+xml,%3Csvg viewBox='0 0 ${imgWidth} ${imgHeight}' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='${baseFrequency}' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='${opacity - (opacity / 1.8)}'/%3E%3C/svg%3E")
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 ${previewCanvasRef.current!.width} ${previewCanvasRef.current!.height}' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='${baseFrequency}' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='${opacity - (opacity / 1.8)}'/%3E%3C/svg%3E")
     `;
     };
 
@@ -290,7 +294,10 @@ function App() {
 
     // --- Generate CSS Code for Display ---
     const generateCssCode = () => {
-        let code = '';
+        let code = `width:${previewCanvasRef.current!.width}px;\n`;
+        code += `height:${previewCanvasRef.current!.width};\n`;
+        code += `background-repeat: no-repeat;\n`;
+        code += `background-size: cover;\n`;
         if (gradientCss !== 'none') {
             code += `background: ${gradientCss};\n`;
 
@@ -306,9 +313,9 @@ function App() {
             code += `filter: ${filterCss};\n`;
         }
         // Add vendor prefixes if needed for broader compatibility (optional)
-        // if (filterCss) {
-        //   code += `-webkit-filter: ${filterCss};\n`;
-        // }
+        if (filterCss) {
+          code += `-webkit-filter: ${filterCss};\n`;
+        }
 
         setCssCodeResult(code.trim()); // Update state
     };
@@ -1334,6 +1341,7 @@ function App() {
                             downloadGradientAsImage={downloadGradientAsImage}
                             loadingDownload={loadingDownload}
                             colorItems={colorItems}
+                            cssCodeResult={cssCodeResult}
                         />
                     </div>
                 </main>

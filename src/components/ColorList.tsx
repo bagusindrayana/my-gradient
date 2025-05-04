@@ -94,7 +94,7 @@ function ColorList({
             <TabsTrigger value="download" className="te-label data-[state=active]:bg-black data-[state=active]:text-white rounded-none">COLOR PALETTE {isLoadingColors && '(Loading...)'}</TabsTrigger>
           </TabsList>
           <TabsContent value="effects" className="space-y-2 grow flex items-stretch justify-stretch w-full">
-            <div className="bg-gray-100 border border-gray-200 p-0 min-h-[200px] grow flex items-stretch justify-stretch overflow-y-auto w-full">
+            <div className="bg-gray-100 border border-gray-200 p-0  grow flex items-stretch justify-stretch overflow-y-auto w-full">
               {colorItems.length > 0 ? (
                 <DndContext
                   sensors={sensors}
@@ -119,14 +119,14 @@ function ColorList({
                   </SortableContext>
                 </DndContext>
               ) : (
-                <div className="min-h-[200px] w-full flex items-center justify-center text-gray-600 text-center text-sm">
+                <div className=" w-full flex items-center justify-center text-gray-600 text-center text-sm">
                   {isLoadingColors ? 'Loading...' : 'No colors extracted yet.'}
                 </div>
               )}
             </div>
           </TabsContent>
           <TabsContent value="download" className='grow flex items-stretch justify-stretch  w-full'>
-            <div className="bg-gray-100 border border-gray-200 p-0 min-h-[200px] w-full">
+            <div className="bg-gray-100 border border-gray-200 p-0  w-full">
               {colorItems.length > 0 ? (
                 <div className="grid grid-cols-3">
                   {colorItems.map(item => (
@@ -139,7 +139,7 @@ function ColorList({
                   ))}
                 </div>
               ) : (
-                <div className="min-h-[200px] flex items-center justify-center text-gray-600 text-center text-sm">
+                <div className=" flex items-center justify-center text-gray-600 text-center text-sm">
                   {isLoadingColors ? 'Loading...' : 'No colors extracted yet.'}
                 </div>
               )}

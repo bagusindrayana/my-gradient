@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DownloadIcon } from 'lucide-react';
+import { CopyIcon, DownloadIcon } from 'lucide-react';
 
 interface DownloadSize {
   width: number;
@@ -20,15 +20,34 @@ interface DownloadProps {
     color: string;
     isVisible: boolean;
   }>;
+  cssCodeResult:string
 }
+
 
 function Download({
   downloadSize,
   setDownloadSize,
   downloadGradientAsImage,
   loadingDownload,
-  colorItems
+  colorItems,
+  cssCodeResult
 }: DownloadProps) {
+  function copyCss(e:any) {
+    console.log(cssCodeResult);
+    navigator.clipboard.writeText(cssCodeResult)
+      .then(() => {
+        const copied = e.target.querySelector(".label");
+  
+        copied.innerHTML = "COPIED!";
+        setTimeout(() => {
+          copied.innerHTML = "COPY CSS";
+        }, 1000);
+      })
+      .catch(err => {
+        console.error('Could not copy text: ', err);
+      });
+  }
+  
   return (
      <Card className="te-card p-1">
           <CardContent className="p-1 gap-1">
@@ -53,9 +72,15 @@ function Download({
             </SelectContent>
           </Select>
 
-          <Button className="w-full te-button flex items-center justify-center gap-2"  onClick={downloadGradientAsImage} disabled={!colorItems.length || colorItems.every(c => !c.isVisible) || loadingDownload}>
+          <Button className="w-full te-button flex items-center justify-center gap-2 relative"  onClick={downloadGradientAsImage} disabled={!colorItems.length || colorItems.every(c => !c.isVisible) || loadingDownload}>
             <DownloadIcon className="h-4 w-4" />
             EXPORT
+          </Button>
+          <Button className="w-full te-button flex items-center justify-center gap-2 relative"  onClick={(e)=>{
+            copyCss(e);
+          }} disabled={!colorItems.length || colorItems.every(c => !c.isVisible) || loadingDownload}>
+            <CopyIcon className="h-4 w-4" />
+           <span className='label'>COPY CSS</span>
           </Button>
         </div>
       
