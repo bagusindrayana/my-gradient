@@ -126,9 +126,9 @@ function ColorList({
             </div>
           </TabsContent>
           <TabsContent value="download" className='grow flex items-stretch justify-stretch  w-full'>
-            <div className="bg-gray-100 border border-gray-200 p-0  w-full">
+            <div className="bg-gray-100 border border-gray-200 p-0  grow flex items-stretch justify-stretch overflow-y-auto w-full">
               {colorItems.length > 0 ? (
-                <div className="grid grid-cols-3">
+                <div className="grid grid-cols-3 w-full">
                   {colorItems.map(item => (
                     <div key={item.id} className='w-full h-14 px-4 py-2 relative overflow-hidden cursor-copy' onClick={(e)=>{
                       copyColor(e,item.color);
@@ -139,7 +139,7 @@ function ColorList({
                   ))}
                 </div>
               ) : (
-                <div className=" flex items-center justify-center text-gray-600 text-center text-sm">
+                <div className=" w-full flex items-center justify-center text-gray-600 text-center text-sm">
                   {isLoadingColors ? 'Loading...' : 'No colors extracted yet.'}
                 </div>
               )}

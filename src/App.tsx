@@ -69,7 +69,7 @@ function App() {
     const [colors, setColors] = useState<any[]>([])
 
     const [loadingDownload, setLoadingDownload] = useState<boolean>(false);
-    
+
 
     // Initialize SimplexNoise on component mount
     useEffect(() => {
@@ -265,7 +265,7 @@ function App() {
             filters.push(`saturate(${saturationValue}%)`);
         }
 
-        if(contrastValue !== 100){
+        if (contrastValue !== 100) {
             filters.push(`contrast(${(contrastValue)}%)`);
         }
         // Add grain filter if implemented later
@@ -314,7 +314,7 @@ function App() {
         }
         // Add vendor prefixes if needed for broader compatibility (optional)
         if (filterCss) {
-          code += `-webkit-filter: ${filterCss};\n`;
+            code += `-webkit-filter: ${filterCss};\n`;
         }
 
         setCssCodeResult(code.trim()); // Update state
@@ -492,71 +492,71 @@ function App() {
 
     const applySaturation = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, intensity: number) => {
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const data = imageData.data;
+        const data = imageData.data;
 
-                for (let i = 0; i < data.length; i += 4) {
-                    // Convert RGB to HSL
-                    const r = data[i] / 255;
-                    const g = data[i + 1] / 255;
-                    const b = data[i + 2] / 255;
+        for (let i = 0; i < data.length; i += 4) {
+            // Convert RGB to HSL
+            const r = data[i] / 255;
+            const g = data[i + 1] / 255;
+            const b = data[i + 2] / 255;
 
-                    const max = Math.max(r, g, b);
-                    const min = Math.min(r, g, b);
-                    let h, s, l = (max + min) / 2;
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
 
-                    if (max === min) {
-                        h = s = 0; // achromatic
-                    } else {
-                        const d = max - min;
-                        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            if (max === min) {
+                h = s = 0; // achromatic
+            } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
 
-                        switch (max) {
-                            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                            case g: h = (b - r) / d + 2; break;
-                            case b: h = (r - g) / d + 4; break;
-                        }
-
-                        if (h != undefined) {
-                            h /= 6;
-                        }
-                    }
-
-                    // Adjust saturation
-                    s = s * (intensity / 100);
-                    s = Math.max(0, Math.min(1, s)); // Clamp between 0 and 1
-
-                    // Convert back to RGB
-                    function hue2rgb(p: number, q: number, t: number) {
-                        if (t < 0) t += 1;
-                        if (t > 1) t -= 1;
-                        if (t < 1 / 6) return p + (q - p) * 6 * t;
-                        if (t < 1 / 2) return q;
-                        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-                        return p;
-                    }
-
-                    let r1, g1, b1;
-
-                    if (h != undefined) {
-                        if (s === 0) {
-                            r1 = g1 = b1 = l; // achromatic
-                        } else {
-                            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-                            const p = 2 * l - q;
-
-                            r1 = hue2rgb(p, q, h + 1 / 3);
-                            g1 = hue2rgb(p, q, h);
-                            b1 = hue2rgb(p, q, h - 1 / 3);
-                        }
-
-                        // Set values back
-                        data[i] = Math.round(r1 * 255);
-                        data[i + 1] = Math.round(g1 * 255);
-                        data[i + 2] = Math.round(b1 * 255);
-                    }
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
                 }
 
-                ctx.putImageData(imageData, 0, 0);
+                if (h != undefined) {
+                    h /= 6;
+                }
+            }
+
+            // Adjust saturation
+            s = s * (intensity / 100);
+            s = Math.max(0, Math.min(1, s)); // Clamp between 0 and 1
+
+            // Convert back to RGB
+            function hue2rgb(p: number, q: number, t: number) {
+                if (t < 0) t += 1;
+                if (t > 1) t -= 1;
+                if (t < 1 / 6) return p + (q - p) * 6 * t;
+                if (t < 1 / 2) return q;
+                if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+                return p;
+            }
+
+            let r1, g1, b1;
+
+            if (h != undefined) {
+                if (s === 0) {
+                    r1 = g1 = b1 = l; // achromatic
+                } else {
+                    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                    const p = 2 * l - q;
+
+                    r1 = hue2rgb(p, q, h + 1 / 3);
+                    g1 = hue2rgb(p, q, h);
+                    b1 = hue2rgb(p, q, h - 1 / 3);
+                }
+
+                // Set values back
+                data[i] = Math.round(r1 * 255);
+                data[i + 1] = Math.round(g1 * 255);
+                data[i + 2] = Math.round(b1 * 255);
+            }
+        }
+
+        ctx.putImageData(imageData, 0, 0);
     };
 
     // Function to render gradient and effects to a canvas
@@ -641,7 +641,7 @@ function App() {
             }
 
             if (contrastValue !== 100) {
-                applyContrast(ctx, targetCanvas, contrastValue-100);
+                applyContrast(ctx, targetCanvas, contrastValue - 100);
             }
 
             // Apply grain
@@ -657,21 +657,43 @@ function App() {
                 tempCanvas.height = height;
                 const tempCtx = tempCanvas.getContext('2d') as CanvasRenderingContext2D;
 
+               
                 // Copy content
                 tempCtx.drawImage(targetCanvas, 0, 0);
 
+                
+                ctx.clearRect(0, 0, width, height);
                 // Apply blur
                 ctx.filter = `blur(${blurValue}px)`;
-                ctx.clearRect(0, 0, width, height);
                 ctx.drawImage(tempCanvas, 0, 0);
                 ctx.filter = 'none';
             }
 
         }
+
+        // const frameCanvas = document.createElement('canvas');
+        // frameCanvas.width = targetCanvas.width + 40; // Add padding for frame
+        // frameCanvas.height = targetCanvas.height + 80; // Extra space for polaroid bottom
+        // const frameCtx = frameCanvas.getContext('2d')!;
+
+        // // Draw white frame background
+        // frameCtx.fillStyle = 'white';
+        // frameCtx.fillRect(0, 0, frameCanvas.width, frameCanvas.height);
+
+        // // Draw gradient image centered
+        // frameCtx.drawImage(
+        //     targetCanvas,
+        //     20, // x offset
+        //     20, // y offset
+        //     targetCanvas.width,
+        //     targetCanvas.height
+        // );
+
+        //  ctx.drawImage(frameCanvas, 0, 0);
     }, [colorItems, colorStops, gradientDirection, blurValue, saturationValue, grainValue, noise2DRef, contrastValue]);
 
-    // Function to download gradient as image
-    const downloadGradientAsImage = () => {
+
+    const downloadGradientAsImage = (withFrame: boolean = false) => {
         if (!gradientCss || gradientCss === 'none') {
             alert('Please generate a gradient first');
             return;
@@ -747,7 +769,7 @@ function App() {
             }
 
             if (contrastValue !== 100) {
-                applyContrast(ctx, canvas, contrastValue-100);
+                applyContrast(ctx, canvas, contrastValue - 100);
             }
             // Apply grain effect if needed
             if (grainValue > 0 && noise2DRef.current) {
@@ -765,7 +787,7 @@ function App() {
                 ctx.drawImage(tempCanvas, 0, 0);
 
                 // Apply the grain effect using SimplexNoise
-                applyGrainEffect(ctx, canvas, grainValue / (canvas.width/Math.round(canvas.width/previewCanvasRef.current!.width)));
+                applyGrainEffect(ctx, canvas, grainValue / (canvas.width / Math.round(canvas.width / previewCanvasRef.current!.width)));
             }
 
             // Apply blur if specified
@@ -810,11 +832,38 @@ function App() {
             applyFilters();
         }
 
-        // Create download link
-        const link = document.createElement('a');
-        link.download = `gradient-${new Date().getTime()}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+        // Apply frame if requested
+        if (withFrame) {
+            const frameCanvas = document.createElement('canvas');
+            frameCanvas.width = canvas.width + 40; // Add padding for frame
+            frameCanvas.height = canvas.height + 80; // Extra space for polaroid bottom
+            const frameCtx = frameCanvas.getContext('2d')!;
+
+            // Draw white frame background
+            frameCtx.fillStyle = 'white';
+            frameCtx.fillRect(0, 0, frameCanvas.width, frameCanvas.height);
+
+            // Draw gradient image centered
+            frameCtx.drawImage(
+                canvas,
+                20, // x offset
+                20, // y offset
+                canvas.width,
+                canvas.height
+            );
+
+            // Create download link with framed image
+            const link = document.createElement('a');
+            link.download = `gradient-${new Date().getTime()}.png`;
+            link.href = frameCanvas.toDataURL('image/png');
+            link.click();
+        } else {
+            // Create download link without frame
+            const link = document.createElement('a');
+            link.download = `gradient-${new Date().getTime()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
 
         setLoadingDownload(false);
     };
@@ -1342,6 +1391,7 @@ function App() {
                             loadingDownload={loadingDownload}
                             colorItems={colorItems}
                             cssCodeResult={cssCodeResult}
+                            renderGradientToCanvas={renderGradientToCanvas}
                         />
                     </div>
                 </main>

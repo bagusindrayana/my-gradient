@@ -30,7 +30,7 @@ function Effects({
         <h2 className="te-heading">Effects</h2>
         <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="showGradientStops" className="te-label">Blur : {blurValue}%</Label>
+            <Label htmlFor="showGradientStops" className="te-label">Blur : {blurValue}px</Label>
             <Slider
               value={[blurValue]}
               min={0}
