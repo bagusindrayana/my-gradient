@@ -25,28 +25,28 @@ function GradientSettings({
             <div className="grid grid-cols-4 gap-2">
               <Button
                 variant="outline"
-                className={`aspect-square p-0 ${gradientDirection === 'to top' ? 'bg-black text-white' : 'bg-gray-100'}`}
+                className={`magnetic-target aspect-square p-0 ${gradientDirection === 'to top' ? 'bg-black text-white' : 'bg-gray-100'}`}
                 onClick={() => setGradientDirection('to top')}
               >
                 <ArrowDown className="rotate-180 h-4 w-4" />
               </Button>
               <Button
                 variant="outline"
-                className={`aspect-square p-0 ${gradientDirection === 'to bottom' ? 'bg-black text-white' : 'bg-gray-100'}`}
+                className={`magnetic-target aspect-square p-0 ${gradientDirection === 'to bottom' ? 'bg-black text-white' : 'bg-gray-100'}`}
                 onClick={() => setGradientDirection('to bottom')}
               >
                 <ArrowDown className="h-4 w-4" />
               </Button>
               <Button
                 variant="outline"
-                className={`aspect-square p-0 ${gradientDirection === 'to right' ? 'bg-black text-white' : 'bg-gray-100'}`}
+                className={`magnetic-target aspect-square p-0 ${gradientDirection === 'to right' ? 'bg-black text-white' : 'bg-gray-100'}`}
                 onClick={() => setGradientDirection('to right')}
               >
                 <ArrowLeft className=" h-4 w-4" />
               </Button>
               <Button
                 variant="outline"
-                className={`aspect-square p-0 ${gradientDirection === 'to left' ? 'bg-black text-white' : 'bg-gray-100'}`}
+                className={`magnetic-target aspect-square p-0 ${gradientDirection === 'to left' ? 'bg-black text-white' : 'bg-gray-100'}`}
                 onClick={() => setGradientDirection('to left')}
               >
                 <ArrowRight className=" h-4 w-4" />
@@ -54,28 +54,28 @@ function GradientSettings({
 
               <Button
                 variant="outline"
-                className={`aspect-square p-0 ${gradientDirection === '45deg' ? 'bg-black text-white' : 'bg-gray-100'}`}
+                className={`magnetic-target aspect-square p-0 ${gradientDirection === '45deg' ? 'bg-black text-white' : 'bg-gray-100'}`}
                 onClick={() => setGradientDirection('45deg')}
               >
                 <ArrowUpRight className=" h-4 w-4" />
               </Button>
               <Button
                 variant="outline"
-                className={`aspect-square p-0 ${gradientDirection === '135deg' ? 'bg-black text-white' : 'bg-gray-100'}`}
+                className={`magnetic-target aspect-square p-0 ${gradientDirection === '135deg' ? 'bg-black text-white' : 'bg-gray-100'}`}
                 onClick={() => setGradientDirection('135deg')}
               >
                 <ArrowDownRight className=" h-4 w-4" />
               </Button>
               <Button
                 variant="outline"
-                className={`aspect-square p-0 ${gradientDirection === '225deg' ? 'bg-black text-white' : 'bg-gray-100'}`}
+                className={`magnetic-target aspect-square p-0 ${gradientDirection === '225deg' ? 'bg-black text-white' : 'bg-gray-100'}`}
                 onClick={() => setGradientDirection('225deg')}
               >
                 <ArrowDownLeft className=" h-4 w-4" />
               </Button>
               <Button
                 variant="outline"
-                className={`aspect-square p-0 ${gradientDirection === '315deg' ? 'bg-black text-white' : 'bg-gray-100'}`}
+                className={`magnetic-target aspect-square p-0 ${gradientDirection === '315deg' ? 'bg-black text-white' : 'bg-gray-100'}`}
                 onClick={() => setGradientDirection('315deg')}
               >
                 <ArrowUpLeft className=" h-4 w-4" />

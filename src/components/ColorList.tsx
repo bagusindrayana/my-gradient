@@ -70,7 +70,7 @@ function ColorList({
     onChange(oldIndex, newIndex);
   }
 
-  function copyColor(e:any,color: string) {
+  function copyColor(e: any, color: string) {
     navigator.clipboard.writeText(color)
       .then(() => {
         const copied = e.target.querySelector(".copied");
@@ -90,8 +90,8 @@ function ColorList({
       <CardContent className="p-1 gap-1 grow flex items-stretch justify-stretch w-full ">
         <Tabs defaultValue="effects" className=' w-full'>
           <TabsList className="grid grid-cols-2 bg-gray-100 rounded-none w-full">
-            <TabsTrigger value="effects" className="te-label data-[state=active]:bg-black data-[state=active]:text-white rounded-none">COLOR LIST {isLoadingColors && '(Loading...)'}</TabsTrigger>
-            <TabsTrigger value="download" className="te-label data-[state=active]:bg-black data-[state=active]:text-white rounded-none">COLOR PALETTE {isLoadingColors && '(Loading...)'}</TabsTrigger>
+            <TabsTrigger value="effects" className="magnetic-target cursor-none te-label data-[state=active]:bg-black data-[state=active]:text-white rounded-none">COLOR LIST {isLoadingColors && '(Loading...)'}</TabsTrigger>
+            <TabsTrigger value="download" className="magnetic-target cursor-none te-label data-[state=active]:bg-black data-[state=active]:text-white rounded-none">COLOR PALETTE {isLoadingColors && '(Loading...)'}</TabsTrigger>
           </TabsList>
           <TabsContent value="effects" className="space-y-2 grow flex items-stretch justify-stretch w-full">
             <div className="bg-gray-100 border border-gray-200 p-0  grow flex items-stretch justify-stretch overflow-y-auto w-full">
@@ -105,7 +105,7 @@ function ColorList({
                     items={colorItems} // Pass items with unique IDs
                     strategy={verticalListSortingStrategy}
                   >
-                    <div className="divide-y divide-gray-200 w-full">
+                    <div className="divide-y divide-gray-200 w-full ">
                       {colorItems.map(item => (
                         <SortableColorItem
                           key={item.id}
@@ -126,17 +126,19 @@ function ColorList({
             </div>
           </TabsContent>
           <TabsContent value="download" className='grow flex items-stretch justify-stretch  w-full'>
-            <div className="bg-gray-100 border border-gray-200 p-0  grow flex items-stretch justify-stretch overflow-y-auto w-full">
+            <div className="bg-gray-100 border border-gray-200 p-0  grow flex  overflow-y-auto w-full">
               {colorItems.length > 0 ? (
-                <div className="grid grid-cols-3 w-full">
-                  {colorItems.map(item => (
-                    <div key={item.id} className='w-full h-14 px-4 py-2 relative overflow-hidden cursor-copy' onClick={(e)=>{
-                      copyColor(e,item.color);
-                    }} style={{ backgroundColor: item.color, opacity: !item.isVisible ? 0.3 : 1 }}>
-                      <div className='absolute -top-2 -right-2 h-4 w-4 bg-black rotate-45 border border-white'></div>
-                      <div className='copied absolute bottom-0 left-0 right-0 hidden p-2 text-xs text-center'>Copied!</div>
-                    </div>
-                  ))}
+                <div className='w-full'>
+                  <div className="grid grid-cols-3 w-full">
+                    {colorItems.map(item => (
+                      <div key={item.id} className='magnetic-target w-full h-14 px-4 py-2 relative overflow-hidden' onClick={(e) => {
+                        copyColor(e, item.color);
+                      }} style={{ backgroundColor: item.color, opacity: !item.isVisible ? 0.3 : 1 }}>
+                        <div className='absolute -top-2 -right-2 h-4 w-4 bg-black rotate-45 border border-white'></div>
+                        <div className='copied absolute bottom-0 left-0 right-0 hidden p-2 text-xs text-center'>Copied!</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <div className=" w-full flex items-center justify-center text-gray-600 text-center text-sm">
@@ -170,10 +172,10 @@ function SortableColorItem({ id, color, isVisible, toggleVisibility }: SortableC
 
   return (
     <div ref={setNodeRef} style={style}
-      className={`flex items-center py-2 px-2 bg-white ${isDragging ? 'dragging' : ''} ${!isVisible ? 'opacity-50' : ''}`}
+      className={`magnetic-target flex items-center py-2 px-2 bg-white ${isDragging ? 'dragging' : ''} ${!isVisible ? 'opacity-50' : ''}`}
       {...attributes}>
       <div className="flex items-center flex-1" >
-        <GripVerticalIcon className="h-4 w-4 text-gray-400 mr-2 cursor-move " {...listeners} />
+        <GripVerticalIcon className="h-4 w-4 text-gray-400 mr-2" {...listeners} />
         <div
           className="h-6 w-6 rounded-sm mr-2"
           style={{ backgroundColor: color, opacity: !isVisible ? 0.3 : 1 }}
@@ -184,7 +186,7 @@ function SortableColorItem({ id, color, isVisible, toggleVisibility }: SortableC
         id="showGradientStops"
         checked={isVisible}
         onCheckedChange={(checked: boolean) => toggleVisibility(id)}
-        className="rounded-none border-black"
+        className="rounded-none border-black magnetic-target"
       />
 
     </div>

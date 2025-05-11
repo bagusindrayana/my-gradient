@@ -37,7 +37,7 @@ function SortColor({
                             <Button
                                 variant="outline"
                                 title='Default'
-                                className={`aspect-square p-0 ${sortBy === 'default' ? 'bg-black text-white' : 'bg-gray-100'}`}
+                                className={`magnetic-target cursor-none aspect-square p-0 ${sortBy === 'default' ? 'bg-black text-white' : 'bg-gray-100'}`}
                                 onClick={() => setSortBy('default')}
                             >
                                 <ArrowDownToDot className="rotate-180 h-4 w-4" />
@@ -45,7 +45,7 @@ function SortColor({
                             <Button
                                 variant="outline"
                                 title='Dark To Light'
-                                className={`aspect-square p-0 ${sortBy === 'darkness' ? 'bg-black text-white' : 'bg-gray-100'}`}
+                                className={`magnetic-target cursor-none aspect-square p-0 ${sortBy === 'darkness' ? 'bg-black text-white' : 'bg-gray-100'}`}
                                 onClick={() => setSortBy('darkness')}
                             >
                                 <Eclipse className="rotate-180 h-4 w-4" />
@@ -53,7 +53,7 @@ function SortColor({
                             <Button
                                 variant="outline"
                                 title='Light To Dark'
-                                className={`aspect-square p-0 ${sortBy === 'lightness' ? 'bg-black text-white' : 'bg-gray-100'}`}
+                                className={`magnetic-target cursor-none aspect-square p-0 ${sortBy === 'lightness' ? 'bg-black text-white' : 'bg-gray-100'}`}
                                 onClick={() => setSortBy('lightness')}
                             >
                                 <SunMoon className="rotate-180 h-4 w-4" />
@@ -61,7 +61,7 @@ function SortColor({
                             <Button
                                 variant="outline"
                                 title='Saturation'
-                                className={`aspect-square p-0 ${sortBy === 'saturation' ? 'bg-black text-white' : 'bg-gray-100'}`}
+                                className={`magnetic-target cursor-none aspect-square p-0 ${sortBy === 'saturation' ? 'bg-black text-white' : 'bg-gray-100'}`}
                                 onClick={() => setSortBy('saturation')}
                             >
                                 <Blend className="rotate-180 h-4 w-4" />
@@ -69,7 +69,7 @@ function SortColor({
                             <Button
                                 variant="outline"
                                 title='Dominant'
-                                className={`aspect-square p-0 ${sortBy === 'dominant' ? 'bg-black text-white' : 'bg-gray-100'}`}
+                                className={`magnetic-target cursor-none aspect-square p-0 ${sortBy === 'dominant' ? 'bg-black text-white' : 'bg-gray-100'}`}
                                 onClick={() => setSortBy('dominant')}
                             >
                                 <Palette className="h-4 w-4" />
@@ -77,7 +77,7 @@ function SortColor({
                             <Button
                                 variant="outline"
                                 title='Soft'
-                                className={`aspect-square p-0 ${sortBy === 'soft' ? 'bg-black text-white' : 'bg-gray-100'}`}
+                                className={`magnetic-target cursor-none aspect-square p-0 ${sortBy === 'soft' ? 'bg-black text-white' : 'bg-gray-100'}`}
                                 onClick={() => setSortBy('soft')}
                             >
                                 <Droplet className="h-4 w-4" />
@@ -85,7 +85,7 @@ function SortColor({
                             <Button
                                 variant="outline"
                                 title='Warm'
-                                className={`aspect-square p-0 ${sortBy === 'warm' ? 'bg-black text-white' : 'bg-gray-100'}`}
+                                className={`magnetic-target cursor-none aspect-square p-0 ${sortBy === 'warm' ? 'bg-black text-white' : 'bg-gray-100'}`}
                                 onClick={() => setSortBy('warm')}
                             >
                                 <Flame className="h-4 w-4" />
@@ -93,7 +93,7 @@ function SortColor({
                             <Button
                                 variant="outline"
                                 title='Pastel'
-                                className={`aspect-square p-0 ${sortBy === 'pastel' ? 'bg-black text-white' : 'bg-gray-100'}`}
+                                className={`magnetic-target cursor-none aspect-square p-0 ${sortBy === 'pastel' ? 'bg-black text-white' : 'bg-gray-100'}`}
                                 onClick={() => setSortBy('pastel')}
                             >
                                 <SwatchBook className="h-4 w-4" />
@@ -101,7 +101,7 @@ function SortColor({
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2 magnetic-target cursor-none">
                         <Label htmlFor="showGradientStops" className="te-label">Colors : {colorCount}</Label>
                         <Slider
                             value={[colorCount]}
@@ -112,11 +112,13 @@ function SortColor({
                             className="te-slider-track"
                         />
                     </div>
+                    <div className='magnetic-target cursor-none w-full'>
+                        <Button className="w-full te-button flex items-center justify-center gap-2" disabled={sortBy == "default"} onClick={generateAgain}>
+                            <Dice5Icon className="h-4 w-4" />
+                            GENERATE
+                        </Button>
+                    </div>
 
-                    <Button className="w-full te-button flex items-center justify-center gap-2" disabled={sortBy == "default"} onClick={generateAgain}>
-                        <Dice5Icon className="h-4 w-4"  />
-                        GENERATE
-                    </Button>
 
                 </div>
             </CardContent>

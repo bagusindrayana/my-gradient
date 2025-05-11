@@ -1,3 +1,8 @@
+html,
+body {
+  cursor: none;
+}
+
 #root {
   margin: 0 auto;
   padding: 0px;

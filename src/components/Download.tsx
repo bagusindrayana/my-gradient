@@ -38,12 +38,12 @@ function Download({
   renderGradientToCanvas
 }: DownloadProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  function copyCss(e:any) {
+  function copyCss(e: any) {
     console.log(cssCodeResult);
     navigator.clipboard.writeText(cssCodeResult)
       .then(() => {
         const copied = e.target.querySelector(".label");
-  
+
         copied.innerHTML = "COPIED!";
         setTimeout(() => {
           copied.innerHTML = "COPY CSS";
@@ -53,7 +53,7 @@ function Download({
         console.error('Could not copy text: ', err);
       });
   }
-  
+
   return (
     <>
       <Card className="te-card p-1">
@@ -61,24 +61,28 @@ function Download({
           <h2 className="te-heading">Download</h2>
           <div className="flex flex-col gap-4 w-full">
             <div className="space-y-2">
-              <Button 
-                className="w-full te-button flex items-center justify-center gap-2 relative"  
-                onClick={() => setIsModalOpen(true)} 
-                disabled={!colorItems.length || colorItems.every(c => !c.isVisible) || loadingDownload}
-              >
-                <DownloadIcon className="h-4 w-4" />
-                EXPORT
-              </Button>
-              <Button 
-                className="w-full te-button flex items-center justify-center gap-2 relative"  
-                onClick={(e) => {
-                  copyCss(e);
-                }} 
-                disabled={!colorItems.length || colorItems.every(c => !c.isVisible) || loadingDownload}
-              >
-                <CopyIcon className="h-4 w-4" />
-                <span className='label'>COPY CSS</span>
-              </Button>
+              <div className='w-full magnetic-target'>
+                <Button
+                  className="w-full te-button flex items-center justify-center gap-2 relative"
+                  onClick={() => setIsModalOpen(true)}
+                  disabled={!colorItems.length || colorItems.every(c => !c.isVisible) || loadingDownload}
+                >
+                  <DownloadIcon className="h-4 w-4" />
+                  EXPORT
+                </Button>
+              </div>
+              <div className='w-full magnetic-target'>
+                <Button
+                  className=" w-full te-button flex items-center justify-center gap-2 relative"
+                  onClick={(e) => {
+                    copyCss(e);
+                  }}
+                  disabled={!colorItems.length || colorItems.every(c => !c.isVisible) || loadingDownload}
+                >
+                  <CopyIcon className="h-4 w-4" />
+                  <span className='label'>COPY CSS</span>
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>

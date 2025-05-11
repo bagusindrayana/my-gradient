@@ -70,7 +70,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
       <div className="bg-white p-6 rounded-lg max-w-2xl w-full">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Download Preview</h2>
-           <Button onClick={onClose} variant={"outline"} className=' cursor-pointer top-0 right-0 rounded-none border-black z-20' size={"sm"} title="Reset image">
+           <Button onClick={onClose} variant={"outline"} className='magnetic-target top-0 right-0 rounded-none border-black z-20' size={"sm"} title="Reset image">
               <XIcon/>
             </Button>
       
@@ -84,7 +84,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
               setDownloadSize({ width, height });
             }}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-full magnetic-target">
               <SelectValue placeholder="Select resolution" />
             </SelectTrigger>
             <SelectContent>
@@ -97,13 +97,15 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
           </Select>
         </div>
 
-        <div className="flex items-center space-x-2 mb-4">
+        <div className="flex items-center space-x-2 mb-4 magnetic-target cursor-none shrink-0 w-auto"  style={{
+              maxWidth:"max-content"
+            }}>
           <Checkbox 
             id="frame-toggle" 
             checked={withFrame} 
             onCheckedChange={(checked) => setWithFrame(!!checked)}
           />
-          <Label htmlFor="frame-toggle">Add Polaroid Frame</Label>
+          <Label htmlFor="frame-toggle" className=' cursor-none shrink-0 w-auto'>Add Polaroid Frame</Label>
         </div>
 
         <div className='w-full relative flex justify-center'>
@@ -147,12 +149,12 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose} className=' font-mono uppercase text-xs tracking-wider flex items-center justify-center gap-2 relative'>
+          <Button variant="outline" onClick={onClose} className='magnetic-target font-mono uppercase text-xs tracking-wider flex items-center justify-center gap-2 relative'>
             Cancel
           </Button>
           <Button 
             onClick={() => downloadGradientAsImage(withFrame)}
-            className="te-button flex items-center justify-center gap-2 relative"
+            className="magnetic-target te-button flex items-center justify-center gap-2 relative"
           >
             <DownloadIcon className="h-4 w-4" />
             Download

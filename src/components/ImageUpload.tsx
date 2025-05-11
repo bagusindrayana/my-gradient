@@ -25,7 +25,7 @@ interface ImageUploadProps {
     isVisible: boolean;
   }>;
   colorSamplePoints: Array<{ x: number, y: number }>;
-  
+
   resetImage: () => void;
   updateColorFromPosition: (id: string, position: Position) => void;
 }
@@ -39,7 +39,7 @@ function ImageUpload({
   imgHeight,
   colorItems,
   colorSamplePoints,
- 
+
   resetImage,
   updateColorFromPosition
 }: ImageUploadProps) {
@@ -68,8 +68,8 @@ function ImageUpload({
         <h2 className="te-heading mb-2">Input Image</h2>
 
         {imgSrc ? (
-          <div className="text-center min-h-[250px] flex flex-col items-center justify-center gap-2 relative  transition-all duration-300">
-            
+          <div className="magnetic-target text-center min-h-[250px] flex flex-col items-center justify-center gap-2 relative  transition-all duration-300">
+
             <div className="relative">
               <img
                 ref={imgRef}
@@ -90,12 +90,12 @@ function ImageUpload({
             </div>
 
             {/* Reset button that appears on hover */}
-            <Button onClick={resetImage} variant={"outline"} className='absolute cursor-pointer top-0 right-0 rounded-none border-black z-20' size={"sm"} title="Reset image">
-              <XIcon/>
+            <Button onClick={resetImage} variant={"outline"} className='magnetic-target absolute  top-0 right-0 rounded-none border-black z-20' size={"sm"} title="Reset image">
+              <XIcon />
             </Button>
             {/* <button
               onClick={resetImage}
-              className="absolute cursor-pointer top-0 right-0 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center group-hover:opacity-100 transition-opacity z-20"
+              className="absolute  top-0 right-0 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center group-hover:opacity-100 transition-opacity z-20"
               title="Reset image"
             >
               ×
@@ -104,25 +104,27 @@ function ImageUpload({
         ) : (
           <div
             {...getRootProps({
-              className: `bg-gray-100 border border-black border-dashed rounded-none min-h-[250px] flex items-center justify-center cursor-pointer ${isDragActive ? 'active' : ''}`
+              className: `magnetic-target cursor-none bg-gray-100 border border-black border-dashed rounded-none min-h-[250px] flex items-center justify-center  ${isDragActive ? 'active' : ''}`
             })}
           >
             <input {...getInputProps()} />
-            <p className="text-gray-600 text-sm">Drag 'n' drop an image here, or click to select one</p>
+            <p className="text-gray-600 text-sm  pointer-events-none">Drag 'n' drop an image here, or click to select one</p>
           </div>
         )}
 
         <div className="flex flex-col gap-1 mt-2">
 
-          <div className="flex items-center space-x-2 mt-2">
-            <Checkbox
-              id="showGradientStops"
-              checked={showColorNodes}
-              onCheckedChange={(checked: boolean) => setShowColorNodes(checked)}
-              className="rounded-none border-black"
-            />
-            <Label htmlFor="showGradientStops" className="te-label">COLOR NODES</Label>
-          </div>
+          <div className="magnetic-target cursor-none flex items-center space-x-2 mt-2 shrink-0 w-auto " style={{
+              maxWidth:"max-content"
+            }}>
+              <Checkbox
+                id="showGradientNodes"
+                checked={showColorNodes}
+                onCheckedChange={(checked: boolean) => setShowColorNodes(checked)}
+                className="rounded-none border-black  cursor-none"
+              />
+              <Label htmlFor="showGradientNodes" className=" cursor-none te-label shrink-0 w-auto">COLOR NODES</Label>
+            </div>
 
           <p className="text-xs text-gray-500 italic">
             Drag nodes to change colors from different parts of the image.

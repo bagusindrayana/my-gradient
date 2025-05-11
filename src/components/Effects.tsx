@@ -26,10 +26,10 @@ function Effects({
 }: EffectsProps) {
   return (
     <Card className="te-card p-1">
-      <CardContent className="p-1 gap-1">
+      <CardContent className="p-1 space-y-1">
         <h2 className="te-heading">Effects</h2>
-        <div className="flex flex-col gap-5">
-          <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1">
+          <div className="magnetic-target cursor-none flex flex-col gap-2">
             <Label htmlFor="showGradientStops" className="te-label">Blur : {blurValue}px</Label>
             <Slider
               value={[blurValue]}
@@ -41,7 +41,7 @@ function Effects({
             />
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="magnetic-target cursor-none flex flex-col gap-2">
             <Label htmlFor="showGradientStops" className="te-label">Saturation : {saturationValue}%</Label>
             <Slider
               value={[saturationValue]}
@@ -53,7 +53,7 @@ function Effects({
             />
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="magnetic-target cursor-none flex flex-col gap-2">
             <Label htmlFor="showGradientStops" className="te-label">Contrast : {contrastValue}%</Label>
             <Slider
               value={[contrastValue]}
@@ -65,7 +65,7 @@ function Effects({
             />
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="magnetic-target cursor-none flex flex-col gap-2">
             <Label htmlFor="showGradientStops" className="te-label">Grain : {grainValue}%</Label>
             <Slider
               value={[grainValue]}

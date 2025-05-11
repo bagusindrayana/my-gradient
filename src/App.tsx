@@ -19,6 +19,7 @@ import {
     arrayMove,
 } from '@dnd-kit/sortable';
 import SortColor from './components/SortColor';
+import MagneticCursor from './components/MagneticCursor';
 
 interface ColorItem {
     id: string;
@@ -1394,8 +1395,10 @@ function App() {
                             renderGradientToCanvas={renderGradientToCanvas}
                         />
                     </div>
+                     <MagneticCursor />
                 </main>
             </div>
+           
         </div>
     );
 }
