@@ -189,7 +189,7 @@ function GradientSlider({ colorItems, colorStops, setColorStops, gradientDirecti
 
     // Determine track and handle positions based on orientation
     return (
-        <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute inset-0 pointer-events-none  cursor-none">
             <svg
                 className="gradient-slider w-full h-full"
                 width="100%"
@@ -324,6 +324,7 @@ function GradientSlider({ colorItems, colorStops, setColorStops, gradientDirecti
                                     fontSize="12"
                                     fontWeight="bold"
                                     style={{ pointerEvents: 'none' }}
+                                    className='cursor-none'
                                 >
                                     {stopValue}%
                                 </text>

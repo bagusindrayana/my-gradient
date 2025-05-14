@@ -112,7 +112,7 @@ function SortColor({
                             className="te-slider-track"
                         />
                     </div>
-                    <div className='magnetic-target cursor-none w-full'>
+                    <div className='magnetic-target cursor-none w-full'  cursor-type="button" cursor-color="white">
                         <Button className="w-full te-button flex items-center justify-center gap-2" disabled={sortBy == "default"} onClick={generateAgain}>
                             <Dice5Icon className="h-4 w-4" />
                             GENERATE

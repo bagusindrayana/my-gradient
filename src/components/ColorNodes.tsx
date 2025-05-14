@@ -124,7 +124,7 @@ function ColorNodes({
 
   return (
     <svg
-      className="absolute top-0 left-0 transition-all duration-300"
+      className="absolute top-0 left-0 transition-all duration-300 cursor-none"
       width={imgWidth}
       height={imgHeight}
       style={{ zIndex: 10, pointerEvents: 'auto' }}
@@ -158,6 +158,7 @@ function ColorNodes({
           style={{ cursor: 'move', filter: 'drop-shadow(0px 0px 3px rgba(0,0,0,0.5))', pointerEvents: 'auto' }}
           onMouseDown={(e) => handleNodeDragStart(e, index)}
           data-index={index}
+           className='cursor-none'
         >
           <title>Drag to change color</title>
         </circle>

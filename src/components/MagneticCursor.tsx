@@ -1,12 +1,14 @@
 
 import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
+import { BanIcon, CircleDotIcon, CirclePlusIcon, CrosshairIcon, DiamondPlusIcon, ScanIcon, TargetIcon } from "lucide-react"
 
 export default function MagneticCursor() {
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
     const [cursorVariant, setCursorVariant] = useState("default")
     const [targetElement, setTargetElement] = useState<DOMRect | null>(null)
     const [textColor, setTextColor] = useState<string>("black");
+    const [cursorType, setCursorType]  = useState<string>("default");
     const myTimeout = useRef<any>(null)
 
     useEffect(() => {
@@ -26,11 +28,21 @@ export default function MagneticCursor() {
                 const rect = target.getBoundingClientRect()
                 setTargetElement(rect)
 
-                myTimeout.current = setTimeout(() => {
-                    const bgColor = getComputedStyle(target).backgroundColor;
+                if(target.getAttribute("cursor-color") != null){
+                    setTextColor(target.getAttribute("cursor-color")!.toString());
+                } else if (target.nodeName == "BUTTON" && (target.getAttribute("role") == null || (target.getAttribute("role") == "tab" && target.getAttribute("aria-selected") == "true"))) {
+                    setTextColor("white");
+                } else {
+                    setTextColor('black');
+                }
+             
+                
 
-                    setTextColor(getContrastingColor(bgColor));
-                }, 200);
+                if(target.getAttribute("cursor-type") != null){
+                    setCursorType(target.getAttribute("cursor-type")!.toString());
+                } else {
+                    setCursorType("default");
+                }
             } else {
                 const close = target.closest(".magnetic-target");
                 if (close) {
@@ -38,11 +50,20 @@ export default function MagneticCursor() {
                     const rect = close.getBoundingClientRect()
                     setTargetElement(rect)
 
-                    myTimeout.current = setTimeout(() => {
-                        const bgColor = getComputedStyle(close).backgroundColor;
+               
+                    if(close.getAttribute("cursor-color") != null){
+                        setTextColor(close.getAttribute("cursor-color")!.toString());
+                    } else if (close.nodeName == "BUTTON" && (close.getAttribute("role") == null || (close.getAttribute("role") == "tab" && close.getAttribute("aria-selected") == "true"))) {
+                        setTextColor("white");
+                    } else {
+                        setTextColor('black');
+                    }
 
-                        setTextColor(getContrastingColor(bgColor));
-                    }, 200);
+                    if(close.getAttribute("cursor-type") != null){
+                        setCursorType(close.getAttribute("cursor-type")!.toString());
+                    } else {
+                        setCursorType("default");
+                    }
                 } else {
                     handleMouseOut();
                 }
@@ -56,6 +77,7 @@ export default function MagneticCursor() {
                 clearTimeout(myTimeout.current);
             }
             setTextColor('black');
+            setCursorType("default");
         }
 
         window.addEventListener("mousemove", mouseMove)
@@ -74,7 +96,7 @@ export default function MagneticCursor() {
         root.addEventListener("pointerenter", handleMouseOver)
         root.addEventListener("pointerleave", handleMouseOut)
 
-         root.addEventListener("mousedown", handleMouseOver)
+        root.addEventListener("mousedown", handleMouseOver)
 
         return () => {
             window.removeEventListener("mousemove", mouseMove)
@@ -100,6 +122,7 @@ export default function MagneticCursor() {
                 stiffness: 200,
                 bounce: 0
             },
+            
         },
         hover: {
             x: targetElement ? targetElement.left - 4 : mousePosition.x - 12,
@@ -117,10 +140,22 @@ export default function MagneticCursor() {
 
     const dotVariants = {
         default: {
-            x: mousePosition.x - 3,
-            y: mousePosition.y - 3,
-            width: 6,
-            height: 6,
+            x: mousePosition.x - 8,
+            y: mousePosition.y - 8,
+            width: 16,
+            height: 16,
+            transition: {
+                type: "spring",
+                mass: 0.1,
+                stiffness: 200,
+                bounce: 0,
+            },
+        },
+        hover: {
+            x: mousePosition.x - 8,
+            y: mousePosition.y - 8,
+            width: 16,
+            height: 16,
             transition: {
                 type: "spring",
                 mass: 0.1,
@@ -128,90 +163,84 @@ export default function MagneticCursor() {
                 bounce: 0
             },
         },
-        hover: {
-            x: mousePosition.x - 3,
-            y: mousePosition.y - 3,
-            width: 6,
-            height: 6,
-            transition: {
-                type: "spring",
-                mass: 0.3,
-                stiffness: 200,
-                bounce: 0
-            },
-        },
     }
 
-    function getContrastingColor(bgColor: any) {
-        if (bgColor.startsWith("oklab(")) {
-            const rgb = oklabToRgb(bgColor);
-            const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
-            return brightness > 125 ? "#000" : "#fff";
-        } else {
-            const rgb = bgColor.match(/\d+/g);
-            if (!rgb) return "#000";
-
-            const r = parseInt(rgb[0], 10);
-            const g = parseInt(rgb[1], 10);
-            const b = parseInt(rgb[2], 10);
-
-            // Calculate brightness
-            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-            return brightness > 125 ? "#000" : "#fff";
+    const cursorIcon = ()=>{
+        switch (cursorType) {
+            case "disabled":
+                return <BanIcon />;
+                break;
+            case "button":
+                return <CrosshairIcon />;
+                break;
+            case "area":
+                return <ScanIcon className="rotate-45"/>;
+                break;
+            case "checkbox":
+                return <DiamondPlusIcon/>;
+                break;
+            case "slider":
+                return <CirclePlusIcon/>;
+                break;
+            default:
+                return <CircleDotIcon />;
+                break;
         }
-
-    }
-
-    function oklabToRgb(oklabStr: any) {
-        const [l, a, b2] = oklabStr.match(/[\d.-]+/g).map(Number);
-
-        // Convert OKLab to linear RGB
-        const L = l;
-        const A = a;
-        const B = b2;
-
-        const l_ = L + 0.3963377774 * A + 0.2158037573 * B;
-        const m_ = L - 0.1055613458 * A - 0.0638541728 * B;
-        const s_ = L - 0.0894841775 * A - 1.2914855480 * B;
-
-        const l3 = l_ ** 3;
-        const m3 = m_ ** 3;
-        const s3 = s_ ** 3;
-
-        let r = +4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3;
-        let g = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3;
-        let b = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3;
-
-        // Clamp and convert to 0–255
-        r = Math.min(255, Math.max(0, r * 255));
-        g = Math.min(255, Math.max(0, g * 255));
-        b = Math.min(255, Math.max(0, b * 255));
-
-        return { r, g, b };
     }
 
     return (
         <>
             <motion.div
-                className="pointer-events-none fixed left-0 top-0 z-50 border border-black"
+                className="pointer-events-none fixed left-0 top-0 z-50"
                 variants={variants}
                 animate={cursorVariant}
             >
-                <div className="absolute -left-[1px] -top-[1px] h-[3px] w-[3px] border border-black"></div>
-                <div className="absolute -right-[1px] -top-[1px] h-[3px] w-[3px] border border-black"></div>
-                <div className="absolute -bottom-[1px] -left-[1px] h-[3px] w-[3px] border border-black"></div>
-                <div className="absolute -bottom-[1px] -right-[1px] h-[3px] w-[3px] border border-black"></div>
+
+                <div className="absolute -left-[1px] -top-[1px] h-[6px] w-[6px]" style={{
+                    borderLeft:"solid black 2px"
+                }}></div>
+
+                <div className="absolute left-0 -top-[1px] h-[6px] w-[6px]" style={{
+                    borderTop:"solid black 2px"
+                }}></div>
+
+                <div className="absolute -right-[1px] -top-[1px] h-[6px] w-[6px]" style={{
+                    borderRight:"solid black 2px"
+                }}></div>
+
+                <div className="absolute right-0 -top-[1px] h-[6px] w-[6px]" style={{
+                    borderTop:"solid black 2px"
+                }}></div>
+
+                <div className="absolute -left-[1px] -bottom-[1px] h-[6px] w-[6px]" style={{
+                    borderLeft:"solid black 2px"
+                }}></div>
+
+                <div className="absolute left-0 -bottom-[1px] h-[6px] w-[6px]" style={{
+                    borderBottom:"solid black 2px"
+                }}></div>
+
+                <div className="absolute -right-[1px] -bottom-[1px] h-[6px] w-[6px]" style={{
+                    borderRight:"solid black 2px"
+                }}></div>
+
+                <div className="absolute right-0 -bottom-[1px] h-[6px] w-[6px]" style={{
+                    borderBottom:"solid black 2px"
+                }}></div>
 
 
             </motion.div>
 
             {/* Center dot that follows mouse precisely */}
             <motion.div
-                className={`fixed left-0 top-0 flex text-center rounded-full bg-white border border-black justify-center items-center pointer-events-none z-50 `}
+                className={`fixed left-0 top-0 flex text-center rounded-full justify-center items-center pointer-events-none z-50 transition-colors`}
                 variants={dotVariants}
                 animate={cursorVariant}
+                style={{
+                    color: textColor
+                }}
             >
-
+                {cursorIcon()}
             </motion.div>
         </>
     )

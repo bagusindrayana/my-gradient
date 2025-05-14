@@ -61,7 +61,7 @@ function Download({
           <h2 className="te-heading">Download</h2>
           <div className="flex flex-col gap-4 w-full">
             <div className="space-y-2">
-              <div className='w-full magnetic-target'>
+              <div className='w-full magnetic-target' cursor-type="button" cursor-color="white">
                 <Button
                   className="w-full te-button flex items-center justify-center gap-2 relative"
                   onClick={() => setIsModalOpen(true)}
@@ -71,7 +71,7 @@ function Download({
                   EXPORT
                 </Button>
               </div>
-              <div className='w-full magnetic-target'>
+              <div className='w-full magnetic-target' cursor-type="button" cursor-color="white">
                 <Button
                   className=" w-full te-button flex items-center justify-center gap-2 relative"
                   onClick={(e) => {

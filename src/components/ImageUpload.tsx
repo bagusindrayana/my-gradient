@@ -68,7 +68,8 @@ function ImageUpload({
         <h2 className="te-heading mb-2">Input Image</h2>
 
         {imgSrc ? (
-          <div className="magnetic-target text-center min-h-[250px] flex flex-col items-center justify-center gap-2 relative  transition-all duration-300">
+          <div className="magnetic-target text-center min-h-[250px] flex flex-col items-center justify-center gap-2 relative  transition-all duration-300"  cursor-type="area" 
+             cursor-color="white">
 
             <div className="relative">
               <img
@@ -106,6 +107,7 @@ function ImageUpload({
             {...getRootProps({
               className: `magnetic-target cursor-none bg-gray-100 border border-black border-dashed rounded-none min-h-[250px] flex items-center justify-center  ${isDragActive ? 'active' : ''}`
             })}
+             cursor-type="area"
           >
             <input {...getInputProps()} />
             <p className="text-gray-600 text-sm  pointer-events-none">Drag 'n' drop an image here, or click to select one</p>
@@ -114,7 +116,7 @@ function ImageUpload({
 
         <div className="flex flex-col gap-1 mt-2">
 
-          <div className="magnetic-target cursor-none flex items-center space-x-2 mt-2 shrink-0 w-auto " style={{
+          <div className="magnetic-target cursor-none flex items-center space-x-2 mt-2 shrink-0 w-auto "  cursor-type="checkbox" style={{
               maxWidth:"max-content"
             }}>
               <Checkbox

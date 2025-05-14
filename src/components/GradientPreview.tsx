@@ -70,7 +70,7 @@ function GradientPreview({
       <CardContent className="p-1">
         <h2 className="te-heading mb-2">Preview</h2>
 
-        <div className='magnetic-target relative bg-gray-100 border border-gray-200 min-h-[250px] overflow-hidden' ref={resultPreviewRef}>
+        <div className='magnetic-target relative bg-gray-100 border border-gray-200 min-h-[250px] overflow-hidden'  cursor-type="area" ref={resultPreviewRef}>
           <canvas
             ref={previewCanvasRef}
             className="gradient-preview w-full min-h-[250px] transition-all duration-300 "
@@ -94,7 +94,7 @@ function GradientPreview({
         </div>
 
         <div className="flex flex-col gap-1 mt-2">
-          <div className="magnetic-target cursor-none flex items-center space-x-2 mt-2 shrink-0 w-auto " style={{
+          <div className="magnetic-target cursor-none flex items-center space-x-2 mt-2 shrink-0 w-auto "  cursor-type="checkbox" style={{
               maxWidth:"max-content"
             }}>
             <Checkbox
